@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>My Token</title>
+  <link rel="stylesheet" href="./style/myToken.css" />
+  <script src="./js/myToken.js"></script>
+</head>
+
+<body>
+  <!-- 显示代币余额 -->
+  <div>
+    <label>当前账户地址：</label>
+    <span id="user-address"></span>
+  </div>
+  <div>
+    <label>代币余额：</label>
+    <span id="balance"></span>
+  </div>
+  <div>
+    <label>总供应量：</label>
+    <span id="total-supply"></span>
+  </div>
+
+  <!-- 转账表单 -->
+  <div>
+    <h3>转账</h3>
+    <form onsubmit="transfer(event)">
+      <label>目标地址：</label>
+      <input type="text" id="transfer-to" />
+      <br />
+      <label>转账数量：</label>
+      <input type="number" id="transfer-amount" />
+      <br />
+      <button type="submit">转账</button>
+    </form>
+  </div>
+
+  <!-- 授权表单 -->
+  <div>
+    <h3>授权</h3>
+    <form onsubmit="approve(event)">
+      <label>目标地址：</label>
+      <input type="text" id="approve-spender" />
+      <br />
+      <label>授权数量：</label>
+      <input type="number" id="approve-amount" />
+      <br />
+      <button type="submit">授权</button>
+    </form>
+  </div>
+</body>
+
+</html>
