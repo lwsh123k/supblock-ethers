@@ -3,11 +3,16 @@
 
 <head>
   <title>My Token</title>
-  <link rel="stylesheet" href="./style/myToken.css" />
-  <script src="./js/myToken.js"></script>
+  <!-- <link rel="stylesheet" href="./style/myToken.css" /> -->
+  <!-- <script type="module" src="./js/myToken.js"></script> -->
 </head>
 
 <body>
+  <div>
+    <label for="private_key">私钥:</label>
+    <input type="text" id="private_key" />
+    <button type="button" id="getAddressButton">获取账户地址和余额</button>
+  </div>
   <!-- 显示代币余额 -->
   <div>
     <label>当前账户地址：</label>
@@ -25,7 +30,7 @@
   <!-- 转账表单 -->
   <div>
     <h3>转账</h3>
-    <form onsubmit="transfer(event)">
+    <form id="transfer-form">
       <label>目标地址：</label>
       <input type="text" id="transfer-to" />
       <br />
@@ -38,16 +43,29 @@
 
   <!-- 延时转账表单 -->
   <div>
-    <h3>授权</h3>
-    <form onsubmit="approve(event)">
+    <h3>延时转账</h3>
+    <form id="approve-form">
       <label>目标地址：</label>
       <input type="text" id="approve-spender" />
       <br />
-      <label>授权数量：</label>
+      <label>转账数量：</label>
       <input type="number" id="approve-amount" />
       <br />
-      <button type="submit">授权</button>
+      <button type="submit">延时转账</button>
     </form>
+    <div>
+      <label for="lockid">未解锁交易id:</label>
+      <input type="text" id="lockid" />
+      <button type="button" id="lockidButton">解锁交易</button>
+    </div>
+    <div>
+      <label for="receiverLog">查看未解锁交易id:</label>
+      <input type="text" id="receiverLog" value="地址Address" />
+      <button type="button" id="receiverLogButton">查看</button>
+    </div>
+
+
+
   </div>
 </body>
 

@@ -1,12 +1,13 @@
 import { ethers } from 'ethers';
-import ERC20ABI from '../../../artifacts/contracts/ERC20.sol/ERC20.json';
+import '../style/myToken.css';
 
 const app = {
     // 创建 Web3Provider 对象
     provider: null,
-
+    wallet: null,
+    singerContract: null,
     // 获取 ERC20 合约对象
-    contractAddress: '0x...', // ERC20 合约地址
+    contractAddress: '0xe9224A2CAc243d763D8B5ee7B4e12D269edce7D6', // ERC20 合约地址
     abi: [
         'constructor(string memory name_, string memory symbol_)',
         'event Transfer(address indexed from, address indexed to, uint256 value)',
@@ -23,35 +24,50 @@ const app = {
     // 初始化变量、查询
     async start() {
         if (window.ethereum) this.provider = new ethers.providers.Web3Provider(window.ethereum);
-        else this.provider = new ethers.providers.Web3Provider('http://localhost:8545');
+        else this.provider = new ethers.providers.JsonRpcProvider('http://localhost:7545');
 
         this.contract = new ethers.Contract(this.contractAddress, this.abi, this.provider);
         // 更新用户信息
-        await app.updateAccount();
-        await app.updateBalance();
+        // await app.updateAccount();
+        // await app.updateBalance();
     },
 
+    // 获取wallet类
+    getWallet() {
+        let private_key = document.querySelector('#private_key').value;
+        this.wallet = new ethers.Wallet(private_key, this.provider);
+        this.singerContract = this.contract.connect(this.wallet);
+    },
     // 更新用户信息
     async updateAccount() {
-        const address = await this.provider.getSigner().getAddress();
-        document.getElementById('account').textContent = 'Account: ' + address;
+        // 获得私钥对应的地址
+        const address = this.wallet.address;
+        document.getElementById('user-address').innerHTML = address;
+        console.log(address);
     },
 
     // 更新余额和总供应量
     async updateBalance() {
-        const balance = await this.contract.balanceOf(this.provider.getSigner().getAddress());
-        document.getElementById('balance').textContent = 'Balance: ' + balance.toString();
+        // 获取账户余额和总供应量
+        const balance = await this.contract.balanceOf(this.wallet.address);
+        // 单位格式化，balance / 10^18
+        document.getElementById('balance').innerHTML = ethers.utils.formatUnits(balance, 18);
         const totalSupply = await this.contract.totalSupply();
-        document.getElementById('total-supply').textContent =
-            'Total Supply: ' + totalSupply.toString();
+        document.getElementById('total-supply').innerHTML = ethers.utils.formatUnits(
+            totalSupply,
+            18
+        );
     },
 
     // 转账函数
     async transfer(event) {
-        event.preventDefault();
+        event.preventDefault(); // 阻止表单默认行为
         const to = document.getElementById('transfer-to').value;
         const amount = document.getElementById('transfer-amount').value;
-        const tx = await this.contract.transfer(to, ethers.utils.parseUnits(amount.toString()));
+        const tx = await this.singerContract.transfer(
+            to,
+            ethers.utils.parseUnits(amount.toString())
+        );
         await tx.wait();
         // 转账成功后更新余额
         await this.updateBalance();
@@ -84,6 +100,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         await app.updateBalance();
     });
 
+    //  输入私钥获得地址和余额事件
+    document.querySelector('#getAddressButton').addEventListener('click', async () => {
+        app.getWallet();
+        await app.updateAccount();
+        await app.updateBalance();
+    });
     // 监听转账表单提交事件
     document.querySelector('#transfer-form').addEventListener('submit', async (event) => {
         await app.transfer(event);
