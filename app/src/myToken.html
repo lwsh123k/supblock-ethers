@@ -44,24 +44,25 @@
   <!-- 延时转账表单 -->
   <div>
     <h3>延时转账</h3>
-    <form id="approve-form">
-      <label>目标地址：</label>
-      <input type="text" id="approve-spender" />
+    <form id="delay-form">
+      <label for="delay-address">目标地址：</label>
+      <input type="text" id="delay-address" />
       <br />
-      <label>转账数量：</label>
-      <input type="number" id="approve-amount" />
+      <label for="delay-amount">转账数量：</label>
+      <input type="number" id="delay-amount" />
       <br />
       <button type="submit">延时转账</button>
     </form>
     <div>
-      <label for="lockid">未解锁交易id:</label>
-      <input type="text" id="lockid" />
+      <label for="lockid">解锁交易:</label>
+      <input type="text" id="lockid" placeholder="交易id" />
       <button type="button" id="lockidButton">解锁交易</button>
     </div>
     <div>
       <label for="receiverLog">查看未解锁交易id:</label>
-      <input type="text" id="receiverLog" value="地址Address" />
+      <input type="text" id="receiverLog" placeholder="账号地址" />
       <button type="button" id="receiverLogButton">查看</button>
+      <ul id="idList"></ul>
     </div>
 
 

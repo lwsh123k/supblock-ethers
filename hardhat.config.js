@@ -1,4 +1,5 @@
 require('@nomicfoundation/hardhat-toolbox');
+require('@nomicfoundation/hardhat-chai-matchers'); // 引入断言
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {

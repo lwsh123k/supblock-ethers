@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "./ERC20.sol";
 
 // 在ERC20的基础上增加延时转账时间
-contract MyToken is ERC20 {
+contract LockERC20 is ERC20 {
 	struct Lock {
 		address sender; // 转账发起方
 		address receiver; // 转账接收方
@@ -18,6 +18,9 @@ contract MyToken is ERC20 {
 
 	mapping(address => bytes32[]) public receiverLog; // 可能记录会有很多，只记录接收者未执行的转账
 	mapping(bytes32 => Lock) public locks; // 转账信息hash => 转账信息
+
+	// 记录lockid
+	event Lockid(address from, address to, bytes32 lockid);
 
 	// 构造函数
 	constructor(
@@ -48,7 +51,8 @@ contract MyToken is ERC20 {
 		receiverLog[_receiver].push(lockId);
 
 		_transfer(msg.sender, address(this), _amount); // 将代币转移到合约地址上
-
+		emit Lockid(msg.sender, _receiver, lockId);
+		// 返回值只能在solidity内部调用，ethers.js不能得到返回值，所以用event保存返回值
 		return lockId;
 	}
 
@@ -84,5 +88,9 @@ contract MyToken is ERC20 {
 		_transfer(address(this), lock.sender, lock.amount); // 将代币返还给发起方
 
 		lock.canceled = true;
+	}
+
+	function getReceiverLog(address addr) public view returns (bytes32[] memory) {
+		return receiverLog[addr];
 	}
 }
