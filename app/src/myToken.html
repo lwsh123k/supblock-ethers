@@ -2,72 +2,72 @@
 <html>
 
 <head>
-  <title>My Token</title>
-  <!-- <link rel="stylesheet" href="./style/myToken.css" /> -->
-  <!-- <script type="module" src="./js/myToken.js"></script> -->
+    <title>My Token</title>
+    <!-- <link rel="stylesheet" href="./style/myToken.css" /> -->
+    <!-- <script type="module" src="./js/myToken.js"></script> -->
 </head>
 
 <body>
-  <div>
-    <label for="private_key">私钥:</label>
-    <input type="text" id="private_key" />
-    <button type="button" id="getAddressButton">获取账户地址和余额</button>
-  </div>
-  <!-- 显示代币余额 -->
-  <div>
-    <label>当前账户地址：</label>
-    <span id="user-address"></span>
-  </div>
-  <div>
-    <label>代币余额：</label>
-    <span id="balance"></span>
-  </div>
-  <div>
-    <label>总供应量：</label>
-    <span id="total-supply"></span>
-  </div>
-
-  <!-- 转账表单 -->
-  <div>
-    <h3>转账</h3>
-    <form id="transfer-form">
-      <label>目标地址：</label>
-      <input type="text" id="transfer-to" />
-      <br />
-      <label>转账数量：</label>
-      <input type="number" id="transfer-amount" />
-      <br />
-      <button type="submit">转账</button>
-    </form>
-  </div>
-
-  <!-- 延时转账表单 -->
-  <div>
-    <h3>延时转账</h3>
-    <form id="delay-form">
-      <label for="delay-address">目标地址：</label>
-      <input type="text" id="delay-address" />
-      <br />
-      <label for="delay-amount">转账数量：</label>
-      <input type="number" id="delay-amount" />
-      <br />
-      <button type="submit">延时转账</button>
-    </form>
     <div>
-      <label for="lockid">解锁交易:</label>
-      <input type="text" id="lockid" placeholder="交易id" />
-      <button type="button" id="lockidButton">解锁交易</button>
+        <label for="private_key">私钥:</label>
+        <input type="text" id="private_key" />
+        <button type="button" id="getAddressButton">获取账户地址和余额</button>
+    </div>
+    <!-- 显示代币余额 -->
+    <div>
+        <label>当前账户地址：</label>
+        <span id="user-address"></span>
     </div>
     <div>
-      <label for="receiverLog">查看未解锁交易id:</label>
-      <input type="text" id="receiverLog" placeholder="账号地址" />
-      <button type="button" id="receiverLogButton">查看</button>
-      <ul id="idList"></ul>
+        <label>代币余额：</label>
+        <span id="balance"></span>
+    </div>
+    <div>
+        <label>总供应量：</label>
+        <span id="total-supply"></span>
     </div>
 
+    <!-- 转账表单 -->
+    <div>
+        <h3>转账</h3>
+        <form id="transfer-form">
+            <label>目标地址：</label>
+            <input type="text" id="transfer-to" />
+            <br />
+            <label>转账数量：</label>
+            <input type="number" id="transfer-amount" />
+            <br />
+            <button type="submit">转账</button>
+        </form>
+    </div>
+
+    <!-- 延时转账表单 -->
+    <div>
+        <h3>延时转账</h3>
+        <form id="delay-form">
+            <label for="delay-address">目标地址：</label>
+            <input type="text" id="delay-address" />
+            <br />
+            <label for="delay-amount">转账数量：</label>
+            <input type="number" id="delay-amount" />
+            <br />
+            <button type="submit">延时转账</button>
+        </form>
+        <div>
+            <label for="lockid">解锁交易:</label>
+            <input type="text" id="lockid" placeholder="交易id" />
+            <button type="button" id="lockidButton">解锁交易</button>
+        </div>
+        <div>
+            <label for="receiverLog">查看未解锁交易id:</label>
+            <input type="text" id="receiverLog" placeholder="账号地址" />
+            <button type="button" id="receiverLogButton">查看</button>
+            <ul id="idList"></ul>
+        </div>
 
 
-  </div>
+
+    </div>
 </body>
 
 </html>
