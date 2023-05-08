@@ -25,14 +25,14 @@ contract SigInfo {
 	}
 
 	// 响应签名的set
-	function setResponseSig(address receiver, bytes32 cHash, bytes32 mHash) public {
+	function setResponseSig(address receiver, bytes32 s, bytes32 t) public {
 		uint len = Sig[receiver][msg.sender].length;
 		if (len == 0) revert("empty array"); // 数组中没有元素,revert
 		// 获取最后一个签名,如果先响应后请求,revert
 		Info storage resInfo = Sig[receiver][msg.sender][len - 1];
 		if (resInfo.resTimestamp != 0) revert("wrong order");
-		resInfo.cHash = cHash;
-		resInfo.mHash = mHash;
+		resInfo.s = s;
+		resInfo.t = t;
 		resInfo.resTimestamp = block.timestamp;
 	}
 
@@ -44,7 +44,7 @@ contract SigInfo {
 	}
 
 	// 得到所有签名get
-	function getSig(address receiver) public view returns (Info[] memory) {
+	function getAllSigs(address receiver) public view returns (Info[] memory) {
 		return Sig[msg.sender][receiver];
 	}
 }

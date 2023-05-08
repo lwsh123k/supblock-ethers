@@ -1,0 +1,29 @@
+{
+  "dependencies": {
+    "bigi": "^1.4.2",
+    "ecurve": "^1.0.6",
+    "express": "^4.18.2",
+    "keccak": "^3.0.3",
+    "socket.io": "^4.6.1"
+  },
+  "name": "server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "optionalDependencies": {
+    "bufferutil": "^4.0.7",
+    "utf-8-validate": "^5.0.10"
+  },
+  "devDependencies": {
+    "node-polyfill-webpack-plugin": "^2.0.1",
+    "nodemon": "^2.0.21",
+    "webpack": "^5.76.1",
+    "webpack-cli": "^5.0.1"
+  }
+}

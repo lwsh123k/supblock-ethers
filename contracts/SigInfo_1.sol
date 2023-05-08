@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-contract SigInfo {
+contract SigInfo_1 {
 	struct ReqInfo {
 		bytes32 cHash;
 		bytes32 mHash;
