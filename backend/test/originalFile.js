@@ -78,8 +78,8 @@ var y = curvePt.affineY.toBuffer(32);
 var G = ecparams.G;
 var n = ecparams.n;
 
-console.log('Px', ':', curvePt.affineX.toString());
-console.log('Py', ':', curvePt.affineY.toString());
+console.log('Px', ':', curvePt.affineX.toHex());
+console.log('Py', ':', curvePt.affineY.toHex());
 /* STEP 1
 The signer randomly selects an integer k ∈ Zn
 , calculates R = kG, and then transmits R to the

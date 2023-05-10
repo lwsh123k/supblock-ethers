@@ -1,13 +1,14 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 // npm run build  npx webpack
 // npm run dev    npx webpack server
 module.exports = {
     mode: 'development',
-    entry: './src/js/myToken.js',
+    entry: { myToken: './src/js/myToken.js', sig: './src/js/sig.js' },
     output: {
-        filename: 'index.js',
+        filename: '[name].js',
         path: path.resolve(__dirname, 'dist'),
     },
     module: {
@@ -25,12 +26,20 @@ module.exports = {
             // 以 public/index.html 为模板创建文件
             // 新的html文件有两个特点：1. 内容和源文件一致 2. 自动引入打包生成的js等资源
             template: path.resolve(__dirname, 'src/myToken.html'),
+            chunks: ['myToken'],
         }),
+        new HtmlWebpackPlugin({
+            filename: 'sig.html',
+            template: path.resolve(__dirname, 'src/sigIndex.html'),
+            chunks: ['sig'], //配置html需要引入的chunk
+        }),
+        new NodePolyfillPlugin(),
     ],
     // 不会输出资源，在内存中打包
+    // 开启dev server可以访问dist目录中的文件，默认为index.html
     devServer: {
         host: 'localhost', // 启动服务器域名
-        port: '3000', // 启动服务器端口号
+        port: '8000', // 启动服务器端口号
         open: true, // 是否自动打开浏览器
         compress: true,
     },

@@ -2,7 +2,7 @@ const { time, loadFixture } = require('@nomicfoundation/hardhat-network-helpers'
 const { expect } = require('chai');
 const hre = require('hardhat');
 
-describe('LockERC20', function () {
+describe('SigInfo', function () {
     // We define a fixture to reuse the same setup in every test.
     // We use loadFixture to run this setup once, snapshot that state,
     // and reset Hardhat Network to that snapshot in every test.
@@ -16,7 +16,7 @@ describe('LockERC20', function () {
         return { sigInfo, owner, otherAccount };
     }
 
-    describe('Deployment', function () {
+    describe('set sig info', function () {
         it('Check set sig info', async function () {
             const { sigInfo, owner, otherAccount } = await loadFixture(SigInfo);
             // 设置cHash和mHash
@@ -30,7 +30,7 @@ describe('LockERC20', function () {
 
             // 设置s和t
             let s = '0x9311466051b4195546194db93dbc6f7ffb86694bfb4f41cceeddde6018b5b8ce';
-            let t = '0x0000000000000000000000000000000000000000000000000000000000000000';
+            let t = 'e3dfd329a3925ca34b35c950985da4e2c1ed510bb4fcedf5cf207cfbbc4808c3';
             const ResSigInfo = sigInfo.connect(otherAccount); // 模拟切换成其他用户响应签名
             const txRes = await ResSigInfo.setResponseSig(owner.address, s, t);
             await txRes.wait();

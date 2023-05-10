@@ -62,7 +62,7 @@ contract LockERC20 is ERC20 {
 		// 交易存在、未被取消、交易已经解锁
 		require(lock.sender != address(0), "lock id not exists");
 		require(!lock.canceled, "transaction cancled");
-		require(block.timestamp >= lock.timestamp, "locked transaction");
+		require(block.timestamp >= lock.timestamp, "locked transaction"); //序号？
 
 		_transfer(address(this), lock.receiver, lock.amount);
 
