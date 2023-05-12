@@ -78,6 +78,8 @@ var y = curvePt.affineY.toBuffer(32);
 var G = ecparams.G;
 var n = ecparams.n;
 
+console.log('Gx', ':', G.affineX.toHex());
+console.log('Gy', ':', G.affineY.toHex());
 console.log('Px', ':', curvePt.affineX.toHex());
 console.log('Py', ':', curvePt.affineY.toHex());
 /* STEP 1
@@ -134,6 +136,8 @@ The requester calculates s = s’ + γ, and (c, s) is the signature on m.
 */
 
 var s = sBlind.add(γ);
+console.log('deblind:', γ.toHex());
+console.log('deblindHash:', keccak256(γ.toString()));
 //console.log(s.mod(n).toHex())
 
 /* STEP 5

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.0;
+
+import "hardhat/console.sol";
 
 contract SigInfo {
 	struct Info {
@@ -10,9 +11,13 @@ contract SigInfo {
 		uint reqTimestamp;
 		bytes32 s;
 		bytes32 t;
-		bytes32 pkx; // 签名方的公钥
-		bytes32 pky;
 		uint resTimestamp;
+	}
+
+	// 签名方的公钥,因为公钥是不变的，可以增加mapping保存映射，而不是每次签名都保存
+	struct publicKey {
+		bytes32 pkx;
+		bytes32 pky;
 	}
 
 	// 不会发生伪造
@@ -20,6 +25,7 @@ contract SigInfo {
 	// 因为mapping对于不存在的映射返回0，所以下标在原来的基础上增加1
 	mapping(address => mapping(address => Info[])) public Sig;
 	mapping(bytes32 => uint) public SigIndex;
+	mapping(address => publicKey) public SigPubKey;
 
 	// 请求签名的set
 	function setRequestSig(address receiver, bytes32 c, bytes32 deblindHash, bytes32 mHash) public {
@@ -32,24 +38,29 @@ contract SigInfo {
 	}
 
 	// 响应签名的set
-	function setResponseSig(
-		address receiver,
-		bytes32 s,
-		bytes32 t,
-		bytes32 pkx,
-		bytes32 pky
-	) public {
-		uint len = Sig[receiver][msg.sender].length;
+	function setResponseSig(address sender, bytes32 s, bytes32 t, bytes32 pkx, bytes32 pky) public {
+		uint len = Sig[sender][msg.sender].length;
 		if (len == 0) revert("empty array"); // 数组中没有元素,revert
 		// 获取最后一个签名,如果先响应后请求,根据响应的时间戳字段判断
-		Info storage resInfo = Sig[receiver][msg.sender][len - 1];
+		Info storage resInfo = Sig[sender][msg.sender][len - 1];
 		if (resInfo.resTimestamp != 0) revert("wrong order");
 		resInfo.s = s;
 		resInfo.t = t;
-		resInfo.pkx = pkx;
-		resInfo.pky = pky;
+		// resInfo.pkx = pkx;
+		// resInfo.pky = pky;
 		resInfo.resTimestamp = block.timestamp;
-		// 求签名hash，hash不包括时间戳
+
+		// 没有设置过公钥需要设置公钥
+		if (SigPubKey[msg.sender].pkx == bytes32(0) && SigPubKey[msg.sender].pky == bytes32(0)) {
+			// 验证公钥的正确性
+			address pkToAddress = address(uint160(uint256(keccak256(abi.encodePacked(pkx, pky)))));
+			if (pkToAddress == msg.sender) {
+				SigPubKey[msg.sender].pkx = pkx;
+				SigPubKey[msg.sender].pky = pky;
+			} else revert("error public key");
+		}
+
+		// 求签名hash，hash不包括时间戳，这里的sender是请求签名的人
 		bytes32 sigHash = keccak256(
 			abi.encode(
 				resInfo.c,
@@ -59,10 +70,11 @@ contract SigInfo {
 				t,
 				pkx,
 				pky,
-				receiver,
+				sender,
 				msg.sender
 			)
 		);
+		console.logBytes32(sigHash);
 		require(SigIndex[sigHash] == 0, "sig exists");
 		SigIndex[sigHash] = len;
 	}

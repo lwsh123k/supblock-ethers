@@ -15,53 +15,74 @@ contract VerifySig is SigInfo {
 	uint private constant Gy = 0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8;
 	uint256 private constant maxUint = 2 ** 256 - 1;
 
-	//event verifyResult(bool result);
+	struct VerifyInfo {
+		address sender;
+		address receiver;
+		string message;
+		uint c;
+		uint deblind;
+		uint s;
+		uint t;
+		uint px;
+		uint py;
+	}
 
 	// 去盲、验证
-	function verifySig(
-		address receiver,
-		string memory message,
-		uint c,
-		uint deblind,
-		uint s,
-		uint t,
-		uint px,
-		uint py
-	) public view returns (bool) {
+	function verifySig(VerifyInfo memory info) public view returns (bool) {
 		uint tempX;
 		uint tempY;
 		uint temp2X;
 		uint temp2Y;
+		info.px = uint(SigPubKey[info.receiver].pkx);
+		info.py = uint(SigPubKey[info.receiver].pky);
 
-		// 验证数据与链上数据是否一致
-		bytes32 deblindHash = keccak256(abi.encodePacked(deblind));
-		bytes32 mHash = keccak256(abi.encodePacked(message));
-		bytes32 sigHash = keccak256(
-			abi.encode(c, deblindHash, mHash, s, t, px, py, receiver, msg.sender)
-		);
-		if (SigIndex[sigHash] == 0) return false;
+		// 数据一致性验证:如果数据不一致，直接返回false
+		if (!verifyconsistency(info)) return false;
 
 		//去盲,考虑s + deblind是否超出uint256的最大值
-		if (s + deblind <= s) {
-			s = (s + deblind) % n;
-			s = ((s + (maxUint % n)) % n) + 1;
-		} else {
-			s = (s + deblind) % n;
-		}
-
+		// if (s + deblind <= s) {
+		// 	s = (s + deblind) % n;
+		// 	s = ((s + (maxUint % n)) % n) + 1;
+		// } else {
+		// 	s = (s + deblind) % n;
+		// }
+		info.s = addmod(info.s, info.deblind, n); // 使用内置函数
+		console.log("s:", info.s);
 		// 去除随机数t: s = s - t,考虑结果小于0的情况
 		// s = (2^256 - t + s) mod 2^256
-		s = maxUint - t + s + 1;
-
+		unchecked {
+			info.s = maxUint - info.t + info.s + 1;
+		}
+		console.log("s:", info.s);
 		// 验证签名
-		(tempX, tempY) = EllipticCurve.ecMul(c, px, py, a, p);
-		(temp2X, temp2Y) = EllipticCurve.ecMul(s, Gx, Gy, a, p);
+		(tempX, tempY) = EllipticCurve.ecMul(info.c, info.px, info.py, a, p);
+		(temp2X, temp2Y) = EllipticCurve.ecMul(info.s, Gx, Gy, a, p);
 		(tempX, ) = EllipticCurve.ecAdd(tempX, tempY, temp2X, temp2Y, a, p);
 		tempX = tempX % n;
 		string memory tempX_string = Strings.toString(tempX);
-		uint result = uint(keccak256(abi.encodePacked(message, tempX_string)));
-		bool isEqual = c == result;
-		// emit verifyResult(isEqual);
-		return isEqual;
+		uint result = uint(keccak256(abi.encodePacked(info.message, tempX_string)));
+		return info.c == result;
+	}
+
+	// 验证数据是否和链上存储一致
+	function verifyconsistency(VerifyInfo memory info) public view returns (bool) {
+		bytes32 sigHash = keccak256(
+			abi.encode(
+				info.c,
+				keccak256(abi.encodePacked(info.deblind)),
+				keccak256(abi.encodePacked(info.message)),
+				info.s,
+				info.t,
+				info.px,
+				info.py,
+				info.sender,
+				info.receiver
+			)
+		);
+		bytes32 dehash = keccak256(abi.encodePacked(info.message));
+		console.logBytes32(dehash);
+		console.logBytes32(sigHash);
+		if (SigIndex[sigHash] == 0) return false;
+		return true;
 	}
 }
