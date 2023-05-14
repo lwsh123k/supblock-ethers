@@ -1,5 +1,6 @@
 import { io } from 'socket.io-client';
 import ecc from './eccBlind.js';
+import sigContract from './sigContract.js';
 
 const sig = {
     socket: null,
@@ -13,7 +14,7 @@ const sig = {
             this.addMessage(username + ' 加入了房间');
         });
 
-        //别人请求自己的公钥
+        //响应者：别人请求自己的公钥
         this.socket.on('request public key', (data) => {
             let publicKey = ecc.getPublicKey();
             let res = {};
@@ -21,22 +22,31 @@ const sig = {
             this.socket.emit('response public key', res);
         });
 
-        //收到别人发给自己的公钥
+        //请求者：收到别人发给自己的公钥
         this.socket.on('response public key', (data) => {
             ecc.deconPublicKey(data.Rx, data.Ry, data.Px, data.Py);
             this.addMessage('收到来自 ' + data.from + ' 的公钥' + data.Rx);
         });
 
-        //别人请求自己的签名
+        //响应者：别人请求自己的签名
         this.socket.on('request sig', (data) => {
             console.log(data.blindMessage);
             let blindSig = ecc.getSig(data.blindMessage);
             let res = {};
             Object.assign(res, blindSig, { from: data.to, to: data.from });
+
+            //将签名信息存储到区块链  异步？？？
+            let px = '0x' + ecc.P_self.affineX.toHex();
+            let py = '0x' + ecc.P_self.affineY.toHex();
+            let s = '0x' + res.sBlind;
+            let t = '0x' + res.t;
+            sigContract.setResponseSig(res.to, s, t, px, py);
+
+            // 将签名信息发送回请求者
             this.socket.emit('response sig', res);
         });
 
-        //收到别人发给自己的签名
+        //请求者：收到别人发给自己的签名
         this.socket.on('response sig', (data) => {
             let sig = ecc.unblindSig(data.sBlind);
             this.addMessage('收到来自 ' + data.from + ' 的签名s(已去除盲化因子):' + sig.s);
@@ -60,15 +70,25 @@ const sig = {
 
     //////////////////////////////////获取签名部分//////////////////////////////////
     // 请求签名
-    getSig() {
+    async getSig() {
         let from = document.getElementById('username').value;
         let to = document.getElementById('to').value;
         let message = document.getElementById('message').value;
-        let cBlinded_c = ecc.blindMessage(message); //返回cBlinded和c
-        let blindMessage = cBlinded_c.cBlinded;
+
+        //盲化信息：返回cBlinded、deblind和c
+        let { cBlinded: blindMessage, c: c, deblind: deblind } = ecc.blindMessage(message);
+
+        // 将to, c, deblind, mHash存储到区块链
+        let mHash = '0x' + ecc.keccak256(message);
+        let deblindHash = '0x' + ecc.getNumberHash(deblind);
+        c = '0x' + c;
+        await sigContract.setRequestSig(to, c, deblindHash, mHash);
+
+        // 请求签名
         this.socket.emit('request sig', { from: from, to: to, blindMessage: blindMessage });
         this.addMessage('你向用户 ' + to + ' 请求了签名');
-        this.addMessage('c:' + cBlinded_c.c);
+        this.addMessage('c:' + c);
+        this.addMessage('deblind:' + deblind);
     },
 
     //////////////////////////////验证签名////////////////////////////////////////
@@ -101,8 +121,18 @@ const sig = {
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
-    // 初始化连接，监听受到的消息
+    // 初始化
     sig.start();
+    sigContract.start();
+
+    //  输入私钥(不带0x)获得地址，连接钱包、设置为ecc的私钥
+    document.querySelector('#getAddressButton').addEventListener('click', async () => {
+        let private_key = document.querySelector('#private_key').value;
+        ecc.setKey(private_key);
+        sigContract.getWallet(private_key);
+        sig.addMessage(`私钥对应的地址为:${sigContract.wallet.address}`);
+        console.log(sigContract.wallet.address);
+    });
 
     // 加入房间
     document.querySelector('#addBtn').addEventListener('click', () => {
@@ -115,8 +145,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // 获得签名
-    document.querySelector('#getSigBtn').addEventListener('click', () => {
-        sig.getSig();
+    document.querySelector('#getSigBtn').addEventListener('click', async () => {
+        await sig.getSig();
     });
 
     // 验证签名

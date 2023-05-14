@@ -65,7 +65,7 @@ contract VerifySig is SigInfo {
 	}
 
 	// 验证数据是否和链上存储一致
-	function verifyconsistency(VerifyInfo memory info) public view returns (bool) {
+	function verifyconsistency(VerifyInfo memory info) internal view returns (bool) {
 		bytes32 sigHash = keccak256(
 			abi.encode(
 				info.c,
