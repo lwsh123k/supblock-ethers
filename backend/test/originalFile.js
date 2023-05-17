@@ -130,6 +130,10 @@ The signer calculates the blind signature s’ = k − c’d, and then sends it 
 */
 
 var sBlind = k.subtract(cBlinded.multiply(BigInteger.fromBuffer(privateKey)));
+sBlind = sBlind.mod(n);
+console.log('sBlind:', sBlind.toString(16));
+console.log('sBlind:', sBlind.toHex(32));
+console.log('sBlind length:', sBlind.toString(16).length);
 
 /* STEP 4
 The requester calculates s = s’ + γ, and (c, s) is the signature on m.

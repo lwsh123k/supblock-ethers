@@ -6,31 +6,42 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ecc-socketio</title>
+    <style>
+        div {
+            height: 50px;
+        }
+    </style>
 </head>
 
 <body>
     <div>
-        <label for="private_key">私钥:</label>
-        <input type="text" id="private_key" />
-        <button type="button" id="getAddressButton">获取账户地址和余额</button>
+        <input type="text" id="private_key" placeholder="私钥" />
+        <button type="button" id="getAddressButton">加入</button>
     </div>
 
-    <input type="text" id="username" placeholder="请输入用户名">
-    <button id="addBtn">加入</button>
-    <br>
+    <div>
+        <input type="text" id="to" placeholder="请输入签名者">
+        <button id="getPublicKeyBtn">获得公钥</button>
+    </div>
 
-    <input type="text" id="to" placeholder="请输入签名者">
-    <button id="getPublicKeyBtn">获得公钥</button>
-    <br>
+    <div>
+        <input type="text" id="message" placeholder="请输入消息">
+        <button id="getSigBtn">获得签名(盲化信息、签名、去盲)</button>
+    </div>
 
-    <input type="text" id="message" placeholder="请输入消息">
-    <button id="getSigBtn">获得签名(盲化信息、签名、去盲)</button>
-    <br>
+    <div>
+        <input type="text" id="receiver" placeholder="receiver">
+        <input type="text" id="c" placeholder="c">
+        <input type="text" id="s" placeholder="s">
+        <input type="text" id="t" placeholder="t">
+        <button id="verifySigBtn">验证签名</button>
+    </div>
 
-    <input type="text" id="c" placeholder="c">
-    <input type="text" id="s" placeholder="s">
-    <input type="text" id="t" placeholder="t">
-    <button id="verifySigBtn">验证签名</button>
+    <div>
+        <input type="text" id="to_showAll" placeholder="请输入签名者">
+        <button id="showAllBtn">查看所有签名</button>
+    </div>
+
     <ul id="messages"></ul>
     <br>
 </body>

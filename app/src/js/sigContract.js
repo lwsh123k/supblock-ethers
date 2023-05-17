@@ -40,13 +40,30 @@ const sigContract = {
 
     // 设置请求部分的签名
     async setRequestSig(receiver, c, deblindHash, mHash) {
-        let tx = await this.singerContract.setRequestSig(receiver, c, deblindHash, mHash);
+        let gasEstimate = await this.singerContract.estimateGas.setRequestSig(
+            receiver,
+            c,
+            deblindHash,
+            mHash
+        );
+        let tx = await this.singerContract.setRequestSig(receiver, c, deblindHash, mHash, {
+            gasLimit: (gasEstimate.toNumber() * 1.1).toFixed(0),
+        });
         await tx.wait();
     },
 
     // 设置响应部分的签名
     async setResponseSig(sender, s, t, pkx, pky) {
-        let tx = await this.singerContract.setResponseSig(sender, s, t, pkx, pky);
+        let gasEstimate = await this.singerContract.estimateGas.setResponseSig(
+            sender,
+            s,
+            t,
+            pkx,
+            pky
+        );
+        let tx = await this.singerContract.setResponseSig(sender, s, t, pkx, pky, {
+            gasLimit: (gasEstimate.toNumber() * 1.1).toFixed(0),
+        });
         await tx.wait();
     },
 
@@ -60,6 +77,7 @@ const sigContract = {
     // 获得所有签名
     async getAllSigs(receiver) {
         let result = await this.singerContract.getAllSigs(receiver);
+        console.log(typeof result);
         console.log(result);
         return result;
     },
