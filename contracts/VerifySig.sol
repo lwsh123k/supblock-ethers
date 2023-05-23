@@ -13,7 +13,6 @@ contract VerifySig is SigInfo {
 	uint private constant n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141;
 	uint private constant Gx = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798;
 	uint private constant Gy = 0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8;
-	uint256 private constant maxUint = 2 ** 256 - 1;
 
 	struct VerifyInfo {
 		address sender;
@@ -27,8 +26,8 @@ contract VerifySig is SigInfo {
 		uint py;
 	}
 
-	// 去盲、验证       返回字符串区分
-	function verifySig(VerifyInfo memory info) public view returns (bool) {
+	// 去盲、验证
+	function verifySig(VerifyInfo memory info) public view returns (string memory) {
 		uint tempX;
 		uint tempY;
 		uint temp2X;
@@ -37,7 +36,7 @@ contract VerifySig is SigInfo {
 		info.py = uint(SigPubKey[info.receiver].pky);
 
 		// 数据一致性验证:如果数据不一致，直接返回false
-		if (!verifyconsistency(info)) return false;
+		if (!verifyconsistency(info)) return "false data";
 
 		//去盲,考虑s + deblind是否超出uint256的最大值
 		// if (s + deblind <= s) {
@@ -48,10 +47,10 @@ contract VerifySig is SigInfo {
 		// }
 		info.s = addmod(info.s, info.deblind, n); // 使用内置函数
 		console.log("s:", info.s);
-		// 去除随机数t: s = s - t,考虑结果小于0的情况
-		// s = (2^256 - t + s) mod 2^256
+		// 去除随机数t: s = (s - t)%n,考虑结果小于0的情况(此处为mod n, 不是mod 2^256)
+		// s = (n - t + s) mod n   (此处t <= n)
 		unchecked {
-			info.s = maxUint - info.t + info.s + 1;
+			info.s = n - info.t + info.s;
 		}
 		console.log("s:", info.s);
 		// 验证签名
@@ -61,7 +60,8 @@ contract VerifySig is SigInfo {
 		tempX = tempX % n;
 		string memory tempX_string = Strings.toString(tempX);
 		uint result = uint(keccak256(abi.encodePacked(info.message, tempX_string)));
-		return info.c == result;
+		if (info.c == result) return "true signature";
+		else return "false signature";
 	}
 
 	// 验证数据是否和链上存储一致

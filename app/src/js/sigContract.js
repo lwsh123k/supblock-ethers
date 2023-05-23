@@ -14,14 +14,14 @@ const sigContract = {
     wallet: null,
     singerContract: null,
     contract: null,
-    contractAddress: '0x493C19EcBe74962d68Fb5134c6d8bd6027F4328A',
+    contractAddress: '0xF87A3446f05F9C50D675fDB35A6f2cf5bEb588D4',
 
     abi: [
         'function setRequestSig(address receiver, bytes32 c, bytes32 deblindHash, bytes32 mHash) public',
         'function setResponseSig(address sender, bytes32 s, bytes32 t, bytes32 pkx, bytes32 pky) public',
         `function getSig(address receiver, uint index) public view returns (${InfoAbi} memory)`,
         `function getAllSigs(address receiver) public view returns (${InfoAbi}[] memory)`,
-        `function verifySig(${VerifyInfoAbi} memory info) public view returns (bool)`,
+        `function verifySig(${VerifyInfoAbi} memory info) public view returns (string memory)`,
     ],
 
     // 初始化
