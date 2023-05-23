@@ -25,7 +25,7 @@ contract SigInfo {
 	// 因为mapping对于不存在的映射返回0，所以下标在原来的基础上增加1
 	mapping(address => mapping(address => Info[])) public Sig;
 	mapping(bytes32 => uint) public SigIndex;
-	mapping(address => publicKey) public SigPubKey;
+	mapping(address => publicKey) public SigPubKey; // 记录地址对应的公钥
 
 	// 请求签名的set
 	function setRequestSig(address receiver, bytes32 c, bytes32 deblindHash, bytes32 mHash) public {

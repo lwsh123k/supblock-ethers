@@ -27,7 +27,7 @@ contract VerifySig is SigInfo {
 		uint py;
 	}
 
-	// 去盲、验证
+	// 去盲、验证       返回字符串区分
 	function verifySig(VerifyInfo memory info) public view returns (bool) {
 		uint tempX;
 		uint tempY;

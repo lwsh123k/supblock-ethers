@@ -25,7 +25,8 @@ const sig = {
         //请求者：收到别人发给自己的公钥
         this.socket.on('response public key', (data) => {
             ecc.deconPublicKey(data.Rx, data.Ry, data.Px, data.Py);
-            this.addMessage('收到来自 ' + data.from + ' 的公钥' + data.Rx);
+            // this.addMessage('收到来自 ' + data.from + ' 的公钥' + data.Rx);
+            this.addMessage('收到来自 ' + data.from + ' 的公钥');
         });
 
         //响应者：别人请求自己的签名
@@ -52,10 +53,14 @@ const sig = {
 
         //请求者：收到别人发给自己的签名
         this.socket.on('response sig', (data) => {
-            this.addMessage('收到来自 ' + data.from + ' 的签名s(未去除盲化因子):' + data.sBlind);
+            this.addToTable('响应者', data.from);
+            this.addToTable('s(未去除盲因子)', data.sBlind);
+            //this.addMessage('收到来自 ' + data.from + ' 的签名s(未去除盲化因子):' + data.sBlind);
             let sig = ecc.unblindSig(data.sBlind);
-            this.addMessage('收到来自 ' + data.from + ' 的签名s(已去除盲化因子):' + sig.s);
-            this.addMessage('收到来自 ' + data.from + ' 的随机数t:' + data.t);
+            this.addToTable('s(已去除盲化因子)', sig.s);
+            this.addToTable('t(随机数)', data.t);
+            //this.addMessage('收到来自 ' + data.from + ' 的签名s(已去除盲化因子):' + sig.s);
+            //this.addMessage('收到来自 ' + data.from + ' 的随机数t:' + data.t);
         });
 
         // 监听 对方不在线 事件
@@ -83,6 +88,13 @@ const sig = {
         //盲化信息：返回cBlinded、deblind和c
         let { cBlinded: blindMessage, c: c, deblind: deblind } = ecc.blindMessage(message);
 
+        // 表格展示
+        let table = document.querySelector('table');
+        table.innerHTML = '';
+        table.style.display = 'table';
+        this.addToTable('请求者', from);
+        this.addToTable('c', c);
+        this.addToTable('盲因子deblind', deblind);
         // 将to, c, deblind, mHash存储到区块链
         let mHash = '0x' + ecc.keccak256(message);
         let deblindHash = '0x' + ecc.getNumberHash(deblind);
@@ -91,9 +103,9 @@ const sig = {
 
         // 请求签名
         this.socket.emit('request sig', { from: from, to: to, blindMessage: blindMessage });
-        this.addMessage('你向用户 ' + to + ' 请求了签名');
-        this.addMessage('c:' + c);
-        this.addMessage('deblind:' + deblind);
+        //this.addMessage('你向用户 ' + to + ' 请求了签名');
+        //this.addMessage('c:' + c);
+        //this.addMessage('deblind:' + deblind);
     },
 
     //////////////////////////////验证签名////////////////////////////////////////
@@ -103,8 +115,9 @@ const sig = {
         let c = '0x' + document.getElementById('c').value;
         let s = '0x' + document.getElementById('s').value;
         let t = '0x' + document.getElementById('t').value;
-        let deblind = '0x' + ecc.deblind.toString(16),
-            sender = sigContract.wallet.address;
+        let deblind = '0x' + document.getElementById('deblind').value;
+        //let deblind = '0x' + ecc.deblind.toString(16),
+        let sender = sigContract.wallet.address;
         // let result = ecc.verifySig(message, c, s, t).result;
         let info = {
             sender: sender,
@@ -143,6 +156,21 @@ const sig = {
         li.appendChild(document.createTextNode(message));
         ul.appendChild(li);
     },
+
+    // 向表格添加2列
+    addToTable(message1, message2) {
+        let table = document.querySelector('table');
+        let tr = document.createElement('tr');
+        let td1 = document.createElement('td');
+        td1.innerHTML = message1;
+        tr.appendChild(td1);
+        if (message2 != undefined) {
+            let td2 = document.createElement('td');
+            td2.innerHTML = message2;
+            tr.appendChild(td2);
+        }
+        table.appendChild(tr);
+    },
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -151,14 +179,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     sigContract.start();
 
     // 输入私钥获得地址，连接钱包、设置为ecc的私钥
-    document.querySelector('#getAddressButton').addEventListener('click', async () => {
+    document.querySelector('#getAddressButton').addEventListener('click', async function () {
         // 为wallet、ecc设置私钥(不带0x)
         let private_key = document.querySelector('#private_key').value;
         ecc.setKey(private_key);
         sigContract.getWallet(private_key);
-
-        // 使用address加入房间
         let addr = sigContract.wallet.address;
+
+        // 显示自己的地址、使用address加入房间
+        let addressDiv = this.parentNode;
+        let addressSpan = addressDiv.children[addressDiv.children.length - 1];
+        addressSpan.textContent = '地址：' + addr;
         sig.joinRoom(addr);
     });
 

@@ -6,7 +6,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
     cors: {
-        origin: 'http://localhost:8000', // 允许跨域访问的源
+        origin: ['http://localhost:8000', 'http://127.0.0.1:5500'], // 允许跨域访问的源
     },
 });
 

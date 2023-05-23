@@ -7,16 +7,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ecc-socketio</title>
     <style>
-        div {
-            height: 50px;
-        }
     </style>
 </head>
 
 <body>
-    <div>
+    <div id="addressDiv" style="height: 50px;">
         <input type="text" id="private_key" placeholder="私钥" />
         <button type="button" id="getAddressButton">加入</button>
+        <br>
+        <span></span>
     </div>
 
     <div>
@@ -31,6 +30,7 @@
 
     <div>
         <input type="text" id="receiver" placeholder="receiver">
+        <input type="text" id="deblind" placeholder="deblind">
         <input type="text" id="c" placeholder="c">
         <input type="text" id="s" placeholder="s">
         <input type="text" id="t" placeholder="t">
@@ -43,6 +43,7 @@
     </div>
 
     <ul id="messages"></ul>
+    <table border="5" style="display: none;"></table>
     <br>
 </body>
 
