@@ -14,7 +14,7 @@ const sigContract = {
     wallet: null,
     singerContract: null,
     contract: null,
-    contractAddress: '0xF87A3446f05F9C50D675fDB35A6f2cf5bEb588D4',
+    contractAddress: '0x6a75eBcFc9563ac0fb0c90BA3eD5AE6738b582DA',
 
     abi: [
         'function setRequestSig(address receiver, bytes32 c, bytes32 deblindHash, bytes32 mHash) public',

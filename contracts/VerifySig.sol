@@ -7,6 +7,7 @@ import "./SigInfo.sol";
 
 // 验证签名继承SigInfo函数，可以访问存储的签名信息变量
 contract VerifySig is SigInfo {
+	// p为有限域的阶
 	uint private constant p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F;
 	uint private constant a = 0;
 	uint private constant b = 7;

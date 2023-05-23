@@ -55,12 +55,13 @@ const sig = {
         this.socket.on('response sig', (data) => {
             this.addToTable('响应者', data.from);
             this.addToTable('s(未去除盲因子)', data.sBlind);
-            //this.addMessage('收到来自 ' + data.from + ' 的签名s(未去除盲化因子):' + data.sBlind);
             let sig = ecc.unblindSig(data.sBlind);
             this.addToTable('s(已去除盲化因子)', sig.s);
             this.addToTable('t(随机数)', data.t);
-            //this.addMessage('收到来自 ' + data.from + ' 的签名s(已去除盲化因子):' + sig.s);
-            //this.addMessage('收到来自 ' + data.from + ' 的随机数t:' + data.t);
+            this.addToTable('<button id="verifyWithTable">验证</button>', '');
+            document
+                .querySelector('#verifyWithTable')
+                .addEventListener('click', this.verifyWithTable);
         });
 
         // 监听 对方不在线 事件
@@ -90,7 +91,7 @@ const sig = {
 
         // 表格展示
         let table = document.querySelector('table');
-        table.innerHTML = '';
+        this.clearTable(table);
         table.style.display = 'table';
         this.addToTable('请求者', from);
         this.addToTable('c', c);
@@ -170,6 +171,43 @@ const sig = {
             tr.appendChild(td2);
         }
         table.appendChild(tr);
+    },
+
+    // 清空表格
+    clearTable(myTable) {
+        let rowCount = myTable.rows.length;
+        for (let i = rowCount - 1; i >= 0; i--) {
+            myTable.deleteRow(i);
+        }
+    },
+
+    async verifyWithTable() {
+        let myTable = document.getElementById('sigTable');
+        // table由rows属性,row由cells属性
+        myTable.lastElementChild.cells[1].innerText = 'pending';
+        let rows = myTable.rows;
+
+        let sender = rows[0].cells[1].innerText;
+        console.log(rows[0].cells[1].innerText);
+        let c = '0x' + rows[1].cells[1].innerText;
+        let deblind = '0x' + rows[2].cells[1].innerText;
+        let receiver = rows[3].cells[1].innerText;
+        let s = '0x' + rows[4].cells[1].innerText;
+        let t = '0x' + rows[6].cells[1].innerText;
+        let message = document.getElementById('message').value;
+        let info = {
+            sender: sender,
+            receiver: receiver,
+            message: message,
+            c: c,
+            deblind: deblind,
+            s: s,
+            t: t,
+            px: 0,
+            py: 0,
+        };
+        let result = await sigContract.verifySig(info);
+        myTable.lastElementChild.cells[1].innerText = result;
     },
 };
 
