@@ -11,11 +11,13 @@
 </head>
 
 <body>
-    <div id="addressDiv" style="height: 50px;">
+    <div id="addressDiv" style="height: 70px;">
         <input type="text" id="private_key" placeholder="私钥" />
         <button type="button" id="getAddressButton">加入</button>
         <br>
-        <span></span>
+        <span id="addressSpan"></span>
+        <br>
+        <span id="balanceSpan"></span>
     </div>
 
     <div>
@@ -35,6 +37,7 @@
         <input type="text" id="s" placeholder="s">
         <input type="text" id="t" placeholder="t">
         <button id="verifySigBtn">验证签名</button>
+        <button id="unlockBtn">解锁交易</button>
     </div>
 
     <div>

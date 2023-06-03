@@ -34,21 +34,26 @@ function verifySig(m, c, s, t) {
         return { result: false };
     }
     console.log('s:', s_big.toString());
+    console.log('n:', n.toHex());
     s_big = s_big.subtract(t_big).mod(n);
     console.log('s-t:', s_big.toString());
     let toHash = curvePt
         .multiply(c_big.mod(n))
         .add(G.multiply(s_big.mod(n)))
         .affineX.mod(n);
+
+    console.log('P * c:', curvePt.multiply(c_big.mod(n)).toString());
+    console.log('G * s:', G.multiply(s_big.mod(n)).toString());
+    console.log('affineX:', toHash.toString());
     let result = BigInteger.fromHex(keccak256(m + toHash));
     return { result: c_big.equals(result) };
 }
 
 let result = verifySig(
-    'sdq',
-    'e67b5ac2f51d6b4a7678f68aab798ddba036e347393eb107548d48e89401bfc0',
-    '085e2a6d337e2cdcfd666edd3aaa0d8a9da529293ab4a795317106b2866f7916',
-    '3e923088fe463a17718aa7fb1c8e65f74468c13eb3d4d1f35434d564fd8d0754'
+    'err',
+    'fa8d38dcb49a1afc455e9dd0beae16e2bb9df7121d491a70cd6e3edeba612168',
+    '9bee4ec45f5c338b95bedf21b0d348c90364bb7d3d77da3ce3a21bb9548173f9',
+    '62edb225bd1f1203c7c1f6f4b0c5da82abf3e9b4f2a8c40614a4b977e63e8494'
 );
 
 console.log(result);

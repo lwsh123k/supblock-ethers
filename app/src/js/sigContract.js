@@ -14,20 +14,25 @@ const sigContract = {
     wallet: null,
     singerContract: null,
     contract: null,
-    contractAddress: '0x6a75eBcFc9563ac0fb0c90BA3eD5AE6738b582DA',
+    contractAddress: '0x2279b7a0a67db372996a5fab50d91eaa73d2ebe6',
 
     abi: [
-        'function setRequestSig(address receiver, bytes32 c, bytes32 deblindHash, bytes32 mHash) public',
         'function setResponseSig(address sender, bytes32 s, bytes32 t, bytes32 pkx, bytes32 pky) public',
         `function getSig(address receiver, uint index) public view returns (${InfoAbi} memory)`,
         `function getAllSigs(address receiver) public view returns (${InfoAbi}[] memory)`,
         `function verifySig(${VerifyInfoAbi} memory info) public view returns (string memory)`,
+        'function setSigAndLock(address receiver, bytes32 c, bytes32 deblindHash, bytes32 mHash) public',
+        `function vrifySigAndUnLock(${VerifyInfoAbi} memory info) public returns (string memory)`,
+        'function totalSupply() external view returns (uint256)',
+        'function balanceOf(address account) external view returns (uint256)',
+        'function transfer(address to, uint256 amount) external returns (bool)',
     ],
 
     // 初始化
     async start() {
         if (window.ethereum) this.provider = new ethers.providers.Web3Provider(window.ethereum);
-        else this.provider = new ethers.providers.JsonRpcProvider('http://localhost:7545');
+        // else this.provider = new ethers.providers.JsonRpcProvider('http://localhost:7545');
+        else this.provider = new ethers.providers.JsonRpcProvider('http://localhost:8545');
 
         this.contract = new ethers.Contract(this.contractAddress, this.abi, this.provider);
     },
@@ -36,20 +41,6 @@ const sigContract = {
     getWallet(private_key) {
         this.wallet = new ethers.Wallet(private_key, this.provider);
         this.singerContract = this.contract.connect(this.wallet);
-    },
-
-    // 设置请求部分的签名
-    async setRequestSig(receiver, c, deblindHash, mHash) {
-        let gasEstimate = await this.singerContract.estimateGas.setRequestSig(
-            receiver,
-            c,
-            deblindHash,
-            mHash
-        );
-        let tx = await this.singerContract.setRequestSig(receiver, c, deblindHash, mHash, {
-            gasLimit: (gasEstimate.toNumber() * 1.1).toFixed(0),
-        });
-        await tx.wait();
     },
 
     // 设置响应部分的签名
@@ -87,6 +78,68 @@ const sigContract = {
         let result = await this.singerContract.verifySig(info);
         console.log(result);
         return result;
+    },
+
+    // 设置请求部分的签名, 并将10ether暂存到合约
+    async setSigAndLock(receiver, c, deblindHash, mHash) {
+        let gasEstimate = await this.singerContract.estimateGas.setSigAndLock(
+            receiver,
+            c,
+            deblindHash,
+            mHash
+        );
+        let tx = await this.singerContract.setSigAndLock(receiver, c, deblindHash, mHash, {
+            gasLimit: (gasEstimate.toNumber() * 1.1).toFixed(0),
+        });
+        await tx.wait();
+    },
+
+    // 验证签名并解锁
+    async vrifySigAndUnLock(info) {
+        try {
+            // 静态模拟调用获取返回值
+            let result = await this.singerContract.callStatic.vrifySigAndUnLock(info);
+            console.log(result);
+            // 只有模拟的合约正常执行, 才会进行真正的执行交易
+            if (
+                result == 'true signature and transfer to signer' ||
+                result == 'false signature and transfer back to requester'
+            ) {
+                let gasEstimate = await this.singerContract.estimateGas.vrifySigAndUnLock(info);
+                let tx = await this.singerContract.vrifySigAndUnLock(info, {
+                    gasLimit: (gasEstimate.toNumber() * 1.1).toFixed(0),
+                });
+                let receipt = await tx.wait();
+                if (receipt && receipt.status == 1) {
+                    return 'execute success: ' + result;
+                } else return 'execute failed';
+            } else return result;
+        } catch (error) {
+            if (error.reason) {
+                console.log('Require error:', error);
+                console.log('Require error message:', error.reason);
+                return 'Require error message:' + error.reason;
+            } else {
+                console.log('Require error:', error);
+            }
+        }
+    },
+
+    // 转账函数
+    async transfer(to, amount) {
+        const tx = await this.singerContract.transfer(
+            to,
+            ethers.utils.parseUnits(amount.toString())
+        );
+        await tx.wait();
+    },
+
+    // 返回账户余额
+    async updateBalance(address) {
+        const balance = await this.contract.balanceOf(address);
+        // 单位格式化，balance / 10^18
+        let formatBal = ethers.utils.formatUnits(balance, 18);
+        return formatBal;
     },
 };
 

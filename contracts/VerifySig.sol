@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.12;
 
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "./EllipticCurve.sol";
@@ -26,6 +26,7 @@ contract VerifySig is SigInfo {
 		uint px;
 		uint py;
 	}
+	mapping(bytes32 => bool) verifyResult; // 记录已经成功验证的结果,避免重复验证
 
 	// 去盲、验证
 	function verifySig(VerifyInfo memory info) public view returns (string memory) {
@@ -37,7 +38,8 @@ contract VerifySig is SigInfo {
 		info.py = uint(SigPubKey[info.receiver].pky);
 
 		// 数据一致性验证:如果数据不一致，直接返回false
-		if (!verifyconsistency(info)) return "false data";
+		bytes32 sigHash = getSigHash(info);
+		if (!verifyconsistency(sigHash)) return "false data";
 
 		//去盲,考虑s + deblind是否超出uint256的最大值
 		// if (s + deblind <= s) {
@@ -48,10 +50,10 @@ contract VerifySig is SigInfo {
 		// }
 		info.s = addmod(info.s, info.deblind, n); // 使用内置函数
 		console.log("s:", info.s);
-		// 去除随机数t: s = (s - t)%n,考虑结果小于0的情况(此处为mod n, 不是mod 2^256)
-		// s = (n - t + s) mod n   (此处t <= n)
+		// 去除随机数t: s = (s - t)%n,考虑结果小于0的情况
+		// s = (n - t + s) mod n   (此处t <= n), 考虑(n - t + s)超过uint的情况，使用内置函数
 		unchecked {
-			info.s = n - info.t + info.s;
+			info.s = addmod(n - info.t, info.s, n);
 		}
 		console.log("s:", info.s);
 		// 验证签名
@@ -66,8 +68,14 @@ contract VerifySig is SigInfo {
 	}
 
 	// 验证数据是否和链上存储一致
-	function verifyconsistency(VerifyInfo memory info) internal view returns (bool) {
-		bytes32 sigHash = keccak256(
+	function verifyconsistency(bytes32 sigHash) internal view returns (bool) {
+		if (SigIndex[sigHash] == 0) return false;
+		return true;
+	}
+
+	// 求输入签名信息的hash
+	function getSigHash(VerifyInfo memory info) internal view returns (bytes32 sigHash) {
+		sigHash = keccak256(
 			abi.encode(
 				info.c,
 				keccak256(abi.encodePacked(info.deblind)),
@@ -80,10 +88,9 @@ contract VerifySig is SigInfo {
 				info.receiver
 			)
 		);
+		// 以下为测试部分,输出中间值
 		bytes32 dehash = keccak256(abi.encodePacked(info.message));
 		console.logBytes32(dehash);
 		console.logBytes32(sigHash);
-		if (SigIndex[sigHash] == 0) return false;
-		return true;
 	}
 }

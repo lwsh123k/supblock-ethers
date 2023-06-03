@@ -9,6 +9,7 @@ contract SigInfo {
 		bytes32 deblindHash; // 去盲时用到的数的hash
 		bytes32 mHash;
 		uint reqTimestamp;
+		bytes32 lockId;
 		bytes32 s;
 		bytes32 t;
 		uint resTimestamp;
@@ -21,19 +22,26 @@ contract SigInfo {
 	}
 
 	// 不会发生伪造
-	// 为了方便验证数据与链上的是否一致,增加一个映射：签名hash => SigInfo数组下标
-	// 因为mapping对于不存在的映射返回0，所以下标在原来的基础上增加1
+	// 为了方便验证数据与链上的是否一致,增加一个映射SigIndex：签名hash => SigInfo数组下标
+	// 因为mapping对于不存在的映射返回0，所以SigIndex映射存储的是:在原来的基础上增加1
 	mapping(address => mapping(address => Info[])) public Sig;
 	mapping(bytes32 => uint) public SigIndex;
 	mapping(address => publicKey) public SigPubKey; // 记录地址对应的公钥
 
 	// 请求签名的set
-	function setRequestSig(address receiver, bytes32 c, bytes32 deblindHash, bytes32 mHash) public {
+	function setRequestSig(
+		address receiver,
+		bytes32 c,
+		bytes32 deblindHash,
+		bytes32 mHash,
+		bytes32 lockId
+	) public {
 		Info memory reqInfo;
 		reqInfo.c = c;
 		reqInfo.deblindHash = deblindHash;
 		reqInfo.mHash = mHash;
 		reqInfo.reqTimestamp = block.timestamp;
+		reqInfo.lockId = lockId;
 		Sig[msg.sender][receiver].push(reqInfo);
 	}
 

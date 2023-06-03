@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.12;
 import "./ERC20.sol";
+import "hardhat/console.sol";
 
 // 在ERC20的基础上增加延时转账时间
 contract LockERC20 is ERC20 {
@@ -11,12 +12,12 @@ contract LockERC20 is ERC20 {
 		uint timestamp; // 转入时间，解锁时间默认为当前时间增加2min
 		uint amount; // 转账金额
 		bool canceled; // 是否取消转账
+		bool hasExecuted; // 交易是否已经执行过, 防止重复执行
+		bool hasReversed; // 签名错误, 交易回退
 	}
-	// 不想让用户记录bytes32
-	// 接收者 => 发送者 => 转账信息，需要用户知道谁转给他了，要知道发送者
-	// mapping(address => mapping(address => bytes32[])) public locks;
 
-	mapping(address => bytes32[]) public receiverLog; // 可能记录会有很多，只记录接收者未执行的转账
+	// 可能记录会有很多，只记录接收者未执行的转账
+	mapping(address => bytes32[]) public receiverLog; // 用户地址 => 转账信息hash数组
 	mapping(bytes32 => Lock) public locks; // 转账信息hash => 转账信息
 
 	// 记录lockid
@@ -45,7 +46,9 @@ contract LockERC20 is ERC20 {
 			receiver: _receiver,
 			timestamp: block.timestamp + 120,
 			amount: _amount,
-			canceled: false
+			canceled: false,
+			hasExecuted: false,
+			hasReversed: false
 		});
 		locks[lockId] = lock;
 		receiverLog[_receiver].push(lockId);
@@ -56,15 +59,45 @@ contract LockERC20 is ERC20 {
 		return lockId;
 	}
 
-	// 解锁转账，谁都可以调用
-	function unlockTransfer(bytes32 _lockId) public {
+	// 解锁转账，只有验证签名合约可(验证为正确)以调用, 由A -> 合约-> B
+	function unlockTransfer(bytes32 _lockId) internal {
 		Lock storage lock = locks[_lockId];
-		// 交易存在、未被取消、交易已经解锁
+		// 交易存在、未被取消、交易已经解锁、交易未被执行
+		require(lock.sender != address(0), "lock id not exists");
+		require(!lock.canceled, "transaction cancled");
+		console.log("now:", block.timestamp);
+		console.log("record:", lock.timestamp);
+		require(block.timestamp >= lock.timestamp, "locked transaction"); //序号？
+		require(!lock.hasExecuted, "transaction has unlocked");
+
+		console.log("hasExecuted:", locks[_lockId].hasExecuted);
+		console.log("lock.receiver:", lock.receiver);
+		lock.hasExecuted = true;
+		_transfer(address(this), lock.receiver, lock.amount);
+
+		bytes32[] storage logs = receiverLog[lock.receiver];
+		// 删除已经执行过的记录
+		uint len = logs.length;
+		for (uint i = 0; i < len; i++)
+			if (logs[i] == _lockId) {
+				logs[i] = logs[len - 1];
+				logs.pop();
+				break;
+			}
+	}
+
+	// 签名错误,将暂存到合约的金额回退, 由A -> 合约-> A
+	function unlockTransferBack(bytes32 _lockId) internal {
+		Lock storage lock = locks[_lockId];
+		// 交易存在、未被取消、交易已经解锁、交易未被执行
 		require(lock.sender != address(0), "lock id not exists");
 		require(!lock.canceled, "transaction cancled");
 		require(block.timestamp >= lock.timestamp, "locked transaction"); //序号？
+		require(!lock.hasExecuted, "transaction has unlocked");
 
-		_transfer(address(this), lock.receiver, lock.amount);
+		lock.hasExecuted = true;
+		lock.hasReversed = true;
+		_transfer(address(this), msg.sender, lock.amount);
 
 		bytes32[] storage logs = receiverLog[lock.receiver];
 		// 删除已经执行过的记录
@@ -90,7 +123,13 @@ contract LockERC20 is ERC20 {
 		lock.canceled = true;
 	}
 
+	// 获取所有接收者未执行的转账
 	function getReceiverLog(address addr) public view returns (bytes32[] memory) {
 		return receiverLog[addr];
+	}
+
+	// 查看是否已经执行
+	function getHasExecuted(bytes32 lockid) public view returns (bool) {
+		return locks[lockid].hasExecuted;
 	}
 }

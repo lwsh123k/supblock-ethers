@@ -100,13 +100,15 @@ const sig = {
         let mHash = '0x' + ecc.keccak256(message);
         let deblindHash = '0x' + ecc.getNumberHash(deblind);
         let prefixc = '0x' + c;
-        await sigContract.setRequestSig(to, prefixc, deblindHash, mHash);
+        await sigContract.setSigAndLock(to, prefixc, deblindHash, mHash);
+        // 更新余额
+        let addr = sigContract.wallet.address;
+        let bal = await sigContract.updateBalance(addr);
+        let balanceSpan = document.getElementById('balanceSpan');
+        balanceSpan.innerText = '余额:' + bal;
 
         // 请求签名
         this.socket.emit('request sig', { from: from, to: to, blindMessage: blindMessage });
-        //this.addMessage('你向用户 ' + to + ' 请求了签名');
-        //this.addMessage('c:' + c);
-        //this.addMessage('deblind:' + deblind);
     },
 
     //////////////////////////////验证签名////////////////////////////////////////
@@ -132,6 +134,35 @@ const sig = {
             py: 0,
         };
         let result = await sigContract.verifySig(info);
+        this.addMessage('结果：' + result);
+    },
+
+    // 验证签名并解锁交易
+    async unlock() {
+        let receiver = document.getElementById('receiver').value;
+        let message = document.getElementById('message').value;
+        let c = '0x' + document.getElementById('c').value;
+        let s = '0x' + document.getElementById('s').value;
+        let t = '0x' + document.getElementById('t').value;
+        let deblind = '0x' + document.getElementById('deblind').value;
+        let sender = sigContract.wallet.address;
+        let info = {
+            sender: sender,
+            receiver: receiver,
+            message: message,
+            c: c,
+            deblind: deblind,
+            s: s,
+            t: t,
+            px: 0,
+            py: 0,
+        };
+        let result = await sigContract.vrifySigAndUnLock(info);
+        // 更新余额
+        let addr = sigContract.wallet.address;
+        let bal = await sigContract.updateBalance(addr);
+        let balanceSpan = document.getElementById('balanceSpan');
+        balanceSpan.innerText = '余额:' + bal;
         this.addMessage('结果：' + result);
     },
 
@@ -223,11 +254,13 @@ window.addEventListener('DOMContentLoaded', async () => {
         ecc.setKey(private_key);
         sigContract.getWallet(private_key);
         let addr = sigContract.wallet.address;
+        let bal = await sigContract.updateBalance(addr);
 
         // 显示自己的地址、使用address加入房间
-        let addressDiv = this.parentNode;
-        let addressSpan = addressDiv.children[addressDiv.children.length - 1];
-        addressSpan.textContent = '地址：' + addr;
+        let addressSpan = document.getElementById('addressSpan');
+        let balanceSpan = document.getElementById('balanceSpan');
+        addressSpan.innerText = '地址：' + addr;
+        balanceSpan.innerText = '余额:' + bal;
         sig.joinRoom(addr);
     });
 
@@ -246,6 +279,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         sig.verifySig();
     });
 
+    // 验证签名并解锁交易
+    document.querySelector('#unlockBtn').addEventListener('click', async () => {
+        await sig.unlock();
+    });
     // 查看所有签名
     document.querySelector('#showAllBtn').addEventListener('click', () => {
         let to = document.querySelector('#to_showAll').value;
