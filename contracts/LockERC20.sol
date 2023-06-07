@@ -59,7 +59,7 @@ contract LockERC20 is ERC20 {
 		return lockId;
 	}
 
-	// 解锁转账，只有验证签名合约可(验证为正确)以调用, 由A -> 合约-> B
+	// 解锁转账，只有验证签名合约(验证为正确)可以调用, 由A -> 合约-> B
 	function unlockTransfer(bytes32 _lockId) internal {
 		Lock storage lock = locks[_lockId];
 		// 交易存在、未被取消、交易已经解锁、交易未被执行
