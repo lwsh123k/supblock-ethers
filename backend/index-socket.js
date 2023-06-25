@@ -6,7 +6,12 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
     cors: {
-        origin: ['http://localhost:8000', 'http://127.0.0.1:5500'], // 允许跨域访问的源
+        origin: [
+            'http://localhost:8000',
+            'http://localhost:5500',
+            'http://127.0.0.1:5500',
+            'http://127.0.0.1:8000',
+        ], // 允许跨域访问的源
     },
 });
 
@@ -25,22 +30,55 @@ io.on('connection', function (socket) {
         io.emit('join', data.username);
     });
 
-    // 监听请求公钥事件(转发消息)
-    socket.on('request public key', function (data) {
-        console.log('用户 ' + data.from + ' 向 ' + data.to + '请求了公钥');
+    // 监听请求上传hash, 请求来自请求者
+    socket.on('upload hash', function (data) {
         // 获取接收者的Socket对象,并转发消息
         const toSocket = onlineUsers[data.to];
         if (toSocket) {
-            toSocket.emit('request public key', data);
+            toSocket.emit('upload hash', data);
+        }
+    });
+
+    // 公开随机数, 请求来自响应者
+    socket.on('reveal random number from res', function (data) {
+        // 获取接收者的Socket对象,并转发消息
+        const toSocket = onlineUsers[data.to];
+        if (toSocket) {
+            toSocket.emit('reveal random number from res', data);
+        }
+    });
+
+    // 公开随机数, 请求来自请求者
+    socket.on('reveal random number from req', function (data) {
+        // 获取接收者的Socket对象,并转发消息
+        const toSocket = onlineUsers[data.to];
+        if (toSocket) {
+            toSocket.emit('reveal random number from req', data);
+        }
+    });
+
+    // 成功公开随机数, 请求来自响应者
+    socket.on('reveal random number success', function (data) {
+        // 获取接收者的Socket对象,并转发消息
+        const toSocket = onlineUsers[data.to];
+        if (toSocket) {
+            toSocket.emit('reveal random number success', data);
+        }
+    });
+    // 监听请求公钥事件(转发消息)
+    socket.on('request hash', function (data) {
+        // 获取接收者的Socket对象,并转发消息
+        const toSocket = onlineUsers[data.to];
+        if (toSocket) {
+            toSocket.emit('request hash', data);
         }
     });
 
     // 监听响应公钥事件(转发消息)
-    socket.on('response public key', function (data) {
-        console.log('用户 ' + data.from + ' 发送了公钥给 ' + data.to);
+    socket.on('response hash', function (data) {
         const toSocket = onlineUsers[data.to];
         if (toSocket) {
-            toSocket.emit('response public key', data);
+            toSocket.emit('response hash', data);
         }
     });
 

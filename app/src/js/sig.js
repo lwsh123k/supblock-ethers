@@ -4,6 +4,9 @@ import sigContract from './sigContract.js';
 
 const sig = {
     socket: null,
+    ni: null,
+    ri: null,
+    hash: null,
 
     start() {
         this.socket = io('http://localhost:3000');
@@ -64,6 +67,51 @@ const sig = {
                 .addEventListener('click', this.verifyWithTable);
         });
 
+        //响应者：上传hash, 发送公开随机数请求
+        this.socket.on('upload hash', async (data) => {
+            let addressA = data.from;
+            let addressB = data.to;
+            let result = await sigContract.getResExecuteTime(addressA);
+            let tA = result[0].toNumber();
+            let tB = result[1].toNumber();
+
+            this.ni = Math.floor(Math.random() * 100);
+            this.ri = sigContract.generateRandomBytes(32);
+            this.hash = sigContract.getHash(this.ni, tA, tB, this.ri);
+            await sigContract.setResHash(addressA, this.hash);
+            // 通过socket通知对方上传
+            this.socket.emit('reveal random number from res', { from: addressB, to: addressA });
+            this.addMessage(
+                `ni: ${this.ni}, tA: ${tA}, tB: ${tB}, ri: ${this.ri}, hash: ${this.hash}`
+            );
+            this.addMessage(`响应者hash:${this.hash}已上传`);
+        });
+
+        //请求者：上传随机数ni和ri, 向响应者发送公开随机数请求
+        this.socket.on('reveal random number from res', async (data) => {
+            let addressA = data.to;
+            let addressB = data.from;
+            await sigContract.setReqInfo(addressB, this.ni, this.ri);
+            // 通过socket通知对方上传
+            this.socket.emit('reveal random number from req', { from: addressA, to: addressB });
+            this.addMessage('请求者ni ri已上传');
+        });
+
+        //响应者：上传随机数ni和ri, 向响应者发送公开随机数请求
+        this.socket.on('reveal random number from req', async (data) => {
+            let addressA = data.from;
+            let addressB = data.to;
+            await sigContract.setResInfo(addressA, this.ni, this.ri);
+            // 通过socket通知对方上传
+            this.socket.emit('reveal random number success', { from: addressB, to: addressA });
+            this.addMessage('请求者ni ri已上传');
+        });
+
+        //请求者：上传随机数ni和ri, 向响应者发送公开随机数请求
+        this.socket.on('reveal random number success', async (data) => {
+            this.addMessage('响应者ni ri已上传');
+        });
+
         // 监听 对方不在线 事件
         this.socket.on('not online', (data) => {
             console.log('用户 ' + data.from + ' 发送了私聊消息给 ' + data.to + ': ' + data.message);
@@ -71,6 +119,34 @@ const sig = {
         });
     },
 
+    // 生成随机数,计算hash,上传自己计算的的hash,并请求对方上传hash
+    async randomHashReq(addressA, addressB) {
+        // 获取双方已经成功执行的次数
+        let result = await sigContract.getReqExecuteTime(addressB);
+        let tA = result[0].toNumber();
+        let tB = result[1].toNumber();
+
+        // 挑选随机数ni, 0 <= ni < 100. Math.random()方法返回一个0（包括）到1（不包括）之间的随机浮点数
+        this.ni = Math.floor(Math.random() * 100);
+        // 挑选混淆值ri, 0 <= ri < 2^256
+        this.ri = sigContract.generateRandomBytes(32);
+        // 取hash, 上传
+        this.hash = sigContract.getHash(this.ni, tA, tB, this.ri);
+        await sigContract.setReqHash(addressB, this.hash);
+        // 通过socket通知对方上传
+        this.socket.emit('upload hash', { from: addressA, to: addressB });
+        this.addMessage(`ni: ${this.ni}, tA: ${tA}, tB: ${tB}, ri: ${this.ri}, hash: ${this.hash}`);
+        this.addMessage(`请求者hash:${this.hash}已上传`);
+    },
+
+    // 验证上传的随机数
+    async verifyRandom() {
+        let sender = document.getElementById('verify-sender').value;
+        let receiver = document.getElementById('verify-receiver').value;
+        let index = document.getElementById('verify-index').value;
+        let result = await sigContract.verifyInfo(sender, receiver, index);
+        this.addMessage(`result:${result}`);
+    },
     //请求别人，获取公钥
     getPublicKey() {
         let from = sigContract.wallet.address;
@@ -247,45 +323,28 @@ window.addEventListener('DOMContentLoaded', async () => {
     sig.start();
     sigContract.start();
 
-    // 输入私钥获得地址，连接钱包、设置为ecc的私钥
+    // 输入私钥获得地址，连接钱包、设置为ecc的私钥(地址和私钥统一带0x前缀)
     document.querySelector('#getAddressButton').addEventListener('click', async function () {
-        // 为wallet、ecc设置私钥(不带0x)
+        // 为wallet、ecc设置私钥
         let private_key = document.querySelector('#private_key').value;
-        ecc.setKey(private_key);
         sigContract.getWallet(private_key);
         let addr = sigContract.wallet.address;
-        let bal = await sigContract.updateBalance(addr);
 
         // 显示自己的地址、使用address加入房间
         let addressSpan = document.getElementById('addressSpan');
-        let balanceSpan = document.getElementById('balanceSpan');
         addressSpan.innerText = '地址：' + addr;
-        balanceSpan.innerText = '余额:' + bal;
         sig.joinRoom(addr);
     });
 
+    // 请求对方上传随机数
+    document.querySelector('#randomGenButton').addEventListener('click', () => {
+        let addressA = sigContract.wallet.address;
+        let addressB = document.getElementById('receiver').value;
+        sig.randomHashReq(addressA, addressB);
+    });
+
     // 获得签名方公钥
-    document.querySelector('#getPublicKeyBtn').addEventListener('click', () => {
-        sig.getPublicKey();
-    });
-
-    // 获得签名
-    document.querySelector('#getSigBtn').addEventListener('click', async () => {
-        await sig.getSig();
-    });
-
-    // 验证签名
-    document.querySelector('#verifySigBtn').addEventListener('click', () => {
-        sig.verifySig();
-    });
-
-    // 验证签名并解锁交易
-    document.querySelector('#unlockBtn').addEventListener('click', async () => {
-        await sig.unlock();
-    });
-    // 查看所有签名
-    document.querySelector('#showAllBtn').addEventListener('click', () => {
-        let to = document.querySelector('#to_showAll').value;
-        sig.showAll(to);
+    document.querySelector('#verifyRandomBtn').addEventListener('click', () => {
+        sig.verifyRandom();
     });
 });

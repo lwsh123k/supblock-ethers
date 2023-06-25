@@ -16,38 +16,26 @@
         <button type="button" id="getAddressButton">加入</button>
         <br>
         <span id="addressSpan"></span>
+    </div>
+
+    <div>
+        <span>Fair Integer Generation (自己上传hash, 通知对方上传):</span>
         <br>
-        <span id="balanceSpan"></span>
+        <input type="text" id="receiver" placeholder="receiver address">
+        <button id="randomGenButton">确定</button>
+        <span id="genResult"></span>
     </div>
 
     <div>
-        <input type="text" id="to" placeholder="请输入签名者">
-        <button id="getPublicKeyBtn">获得公钥</button>
+        <span>检查随机数正确性</span>
+        <br>
+        <input type="text" id="verify-sender" placeholder="sender address">
+        <input type="text" id="verify-receiver" placeholder="receiver address">
+        <input type="text" id="verify-index" placeholder="index">
+        <button id="verifyRandomBtn">确定</button>
     </div>
-
-    <div>
-        <input type="text" id="message" placeholder="请输入消息">
-        <button id="getSigBtn">获得签名(盲化信息、签名、去盲)</button>
-    </div>
-
-    <div>
-        <input type="text" id="receiver" placeholder="receiver">
-        <input type="text" id="deblind" placeholder="deblind">
-        <input type="text" id="c" placeholder="c">
-        <input type="text" id="s" placeholder="s">
-        <input type="text" id="t" placeholder="t">
-        <button id="verifySigBtn">验证签名</button>
-        <button id="unlockBtn">解锁交易</button>
-    </div>
-
-    <div>
-        <input type="text" id="to_showAll" placeholder="请输入签名者">
-        <button id="showAllBtn">查看所有签名</button>
-    </div>
-
     <ul id="messages"></ul>
-    <table id="sigTable" border="5" style="display: none;"></table>
-    <br>
+
 </body>
 
 </html>
