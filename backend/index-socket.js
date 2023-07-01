@@ -65,6 +65,41 @@ io.on('connection', function (socket) {
             toSocket.emit('reveal random number success', data);
         }
     });
+
+    //////////////////////////////////////////////fairIntegerError的转发////////////////////////////////////////////
+    socket.on('req upload hash success', function (data) {
+        // 获取接收者的Socket对象,并转发消息
+        const toSocket = onlineUsers[data.to];
+        if (toSocket) {
+            toSocket.emit('req upload hash success', data);
+        }
+    });
+
+    socket.on('res upload hash success', function (data) {
+        // 获取接收者的Socket对象,并转发消息
+        const toSocket = onlineUsers[data.to];
+        if (toSocket) {
+            toSocket.emit('res upload hash success', data);
+        }
+    });
+
+    socket.on('req reveal random number success', function (data) {
+        // 获取接收者的Socket对象,并转发消息
+        const toSocket = onlineUsers[data.to];
+        if (toSocket) {
+            toSocket.emit('req reveal random number success', data);
+        }
+    });
+
+    socket.on('res reveal random number success', function (data) {
+        // 获取接收者的Socket对象,并转发消息
+        const toSocket = onlineUsers[data.to];
+        if (toSocket) {
+            toSocket.emit('res reveal random number success', data);
+        }
+    });
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // 监听请求公钥事件(转发消息)
     socket.on('request hash', function (data) {
         // 获取接收者的Socket对象,并转发消息

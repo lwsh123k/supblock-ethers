@@ -6,16 +6,20 @@ pragma solidity ^0.8.0;
 
 contract FairInteger {
 	// 记录Integer信息
+	// 如果是hash没有响应, 重新请求; 如果是ni和ri没有按照规定时间上传, 重新选择随机数
 	struct IntegerInfo {
 		bytes32 infoHashA; // 请求者信息设置
+		uint256 hashTa; // 上传hash的时间, 未按规定时间上传ni和ri, 重新选择随机数
 		uint256 niA; //随机数
 		uint256 riA; // 证明
 		uint256 tA; // 执行次数
 		bytes32 infoHashB; // 响应者信息设置
+		uint256 hashTb;
 		uint256 niB;
 		uint256 riB;
 		uint256 tB;
 		bool hasVerify;
+		uint8 state;
 	}
 
 	// 记录token chain中, 节点的信息
@@ -24,6 +28,26 @@ contract FairInteger {
 		address receiver;
 		uint256 index; // personalInteger映射中数组的下标
 	}
+
+	// 定义事件, 方便监听检索
+	event ReqInfoUpload(
+		address indexed from,
+		address indexed to,
+		uint256 ni,
+		uint256 tA,
+		uint256 tB,
+		uint256 ri,
+		bytes32 infoHash
+	);
+	event ResInfoUpload(
+		address indexed from,
+		address indexed to,
+		uint256 ni,
+		uint256 tA,
+		uint256 tB,
+		uint256 ri,
+		bytes32 infoHash
+	);
 
 	// 记录成功执行的次数
 	mapping(address => uint256) private executeTime;
@@ -40,11 +64,11 @@ contract FairInteger {
 		require(
 			// 隐式类型转换
 			personalInteger[sender][receiver][len - 1].infoHashA != 0,
-			"request message hash not exists"
+			"requester message hash not exists"
 		);
 		require(
 			personalInteger[sender][receiver][len - 1].infoHashB != 0,
-			"response message hash has existed"
+			"responder message hash not existed"
 		);
 		_;
 	}
@@ -56,6 +80,7 @@ contract FairInteger {
 		integerInfo.hasVerify = false;
 		integerInfo.tA = executeTime[msg.sender];
 		integerInfo.tB = executeTime[receiver];
+		integerInfo.hashTa = block.timestamp;
 		personalInteger[msg.sender][receiver].push(integerInfo);
 	}
 
@@ -73,6 +98,7 @@ contract FairInteger {
 			"response message hash has existed"
 		);
 		personalInteger[sender][msg.sender][len - 1].infoHashB = mHash;
+		personalInteger[sender][msg.sender][len - 1].hashTb = block.timestamp;
 	}
 
 	// 请求者公开ni, ri.
@@ -82,9 +108,40 @@ contract FairInteger {
 		uint256 ri
 	) public validHash(msg.sender, receiver) {
 		// 要求: 双方的info hash已经设置过
+		// 		 ni ri不能重复设置
+		//		 在规定时间内(120s)上传ni, ri
 		uint256 len = personalInteger[msg.sender][receiver].length;
+		IntegerInfo memory integerInfo = personalInteger[msg.sender][receiver][len - 1];
+		require(integerInfo.niA == 0, "requester ni has existed");
+		require(integerInfo.riA == 0, "requester ri has existed");
+		require(
+			integerInfo.hashTa + 120 seconds >= block.timestamp,
+			"requester ni ri not in allowed time"
+		);
 		personalInteger[msg.sender][receiver][len - 1].niA = ni;
 		personalInteger[msg.sender][receiver][len - 1].riA = ri;
+		emit ReqInfoUpload(
+			msg.sender,
+			receiver,
+			ni,
+			integerInfo.tA,
+			integerInfo.tB,
+			ri,
+			integerInfo.infoHashA
+		);
+		// 上传时就判断正确性
+		bytes32 hashA = keccak256(abi.encode(ni, integerInfo.tA, integerInfo.tB, ri));
+		uint state = personalInteger[msg.sender][receiver][len - 1].state;
+		if (hashA == integerInfo.infoHashA) {
+			executeTime[msg.sender]++;
+			if (state == 0) personalInteger[msg.sender][receiver][len - 1].state = 4;
+			else if (state == 5) personalInteger[msg.sender][receiver][len - 1].state = 1;
+			else if (state == 7) personalInteger[msg.sender][receiver][len - 1].state = 2;
+		} else {
+			if (state == 0) personalInteger[msg.sender][receiver][len - 1].state = 6;
+			else if (state == 5) personalInteger[msg.sender][receiver][len - 1].state = 3;
+			else if (state == 7) personalInteger[msg.sender][receiver][len - 1].state = 10;
+		}
 	}
 
 	// 响应者公开ni, ri.
@@ -94,46 +151,169 @@ contract FairInteger {
 		uint256 ri
 	) public validHash(sender, msg.sender) {
 		// 要求: 双方的info hash已经设置过
+		// 		 ni ri不能重复设置
+		//       在规定时间内(120s)上传ni, ri
 		uint256 len = personalInteger[sender][msg.sender].length;
+		IntegerInfo memory integerInfo = personalInteger[sender][msg.sender][len - 1];
+
+		// integerInfo.riB的初始值为0, 为了避免判断错误, 要求证据ri != 0
+		require(ri != 0, "ri is zero");
+		require(integerInfo.riB == 0, "responder ri has existed");
+		require(
+			integerInfo.hashTb + 120 seconds >= block.timestamp,
+			"responder ni ri not in allowed time"
+		);
 		personalInteger[sender][msg.sender][len - 1].niB = ni;
 		personalInteger[sender][msg.sender][len - 1].riB = ri;
+		emit ResInfoUpload(
+			sender,
+			msg.sender,
+			ni,
+			integerInfo.tA,
+			integerInfo.tB,
+			ri,
+			integerInfo.infoHashB
+		);
+		// 上传时就判断正确性
+		bytes32 hashB = keccak256(abi.encode(ni, integerInfo.tA, integerInfo.tB, ri));
+		uint state = personalInteger[sender][msg.sender][len - 1].state;
+		if (hashB == integerInfo.infoHashB) {
+			executeTime[msg.sender]++;
+			if (state == 0) personalInteger[sender][msg.sender][len - 1].state = 5;
+			else if (state == 4) personalInteger[sender][msg.sender][len - 1].state = 1;
+			else if (state == 6) personalInteger[sender][msg.sender][len - 1].state = 3;
+		} else {
+			if (state == 0) personalInteger[sender][msg.sender][len - 1].state = 7;
+			else if (state == 4) personalInteger[sender][msg.sender][len - 1].state = 2;
+			else if (state == 6) personalInteger[sender][msg.sender][len - 1].state = 10;
+		}
 	}
 
-	// 请求者:获取执行次数
-	function getReqExecuteTime(address receiver) public view returns (uint256, uint256) {
-		return (executeTime[msg.sender], executeTime[receiver]);
+	// 请求者:获取执行次数, 当前数组的下标(从0开始)
+	function getReqExecuteTime(address receiver) public view returns (uint256, uint256, uint256) {
+		uint256 len = personalInteger[msg.sender][receiver].length == 0
+			? 0
+			: personalInteger[msg.sender][receiver].length - 1;
+		return (executeTime[msg.sender], executeTime[receiver], len);
 	}
 
 	// 响应者:获取执行成功次数
-	// 有一种情况: 当响应者通过executeTime获得执行成功次数时, 刚好执行成功了一次
-	// 此时executeTime+1, 与请求者的不一致
-	function getResExecuteTime(address sender) public view returns (uint256, uint256) {
+	/* 有一种情况: 当响应者通过executeTime获得执行成功次数时, 刚好执行成功了一次, 此时executeTime+1, 与请求者的不一致
+	    或者A请求B， 但是A没有上传新的数组，这会使得B获得的是上一个数组的旧数据 */
+	function getResExecuteTime(address sender) public view returns (uint256, uint256, uint256) {
 		uint256 len = personalInteger[sender][msg.sender].length;
+		require(len > 0, "empty array");
+		require(personalInteger[sender][msg.sender][len - 1].hashTb == 0, "not latest array");
 		if (len == 0) revert("empty array");
 		return (
 			personalInteger[sender][msg.sender][len - 1].tA,
-			personalInteger[sender][msg.sender][len - 1].tB
+			personalInteger[sender][msg.sender][len - 1].tB,
+			len - 1
 		);
 	}
 
-	// 验证正确性, index从0开始
+	// 验证正确性(index从0开始): 有一方上传错误
+	// 验证时间: 有一方没有上传  或者  有一方没有按规定时间上传
+	//
 	function verifyInfo(
 		address sender,
 		address receiver,
 		uint256 index
-	) public view returns (string memory) {
+	) public returns (string memory) {
 		uint256 len = personalInteger[sender][receiver].length;
 		require(index < len, "error index");
 		IntegerInfo memory integerInfo = personalInteger[sender][receiver][index];
+
+		// hash都没有上传
+		if (integerInfo.hashTa == 0) return "req not upload hash";
+		if (integerInfo.hashTb == 0) return "res not upload hash";
+		// 上传了hash, 但ni和ri上传出问题. 验证的时间点 > 等待上传的时间点
+		if (
+			integerInfo.hashTa + 120 seconds >= block.timestamp ||
+			integerInfo.hashTb + 120 seconds >= block.timestamp
+		) return "verify not in time";
+		// 有一方没有上传
+		if (integerInfo.niA == 0 || integerInfo.riA == 0) return "req not upload ni or ri";
+		if (integerInfo.niB == 0 || integerInfo.riB == 0) return "res not upload ni or ri";
+
+		// 取hash, 验证正确性
 		bytes32 hashA = keccak256(
 			abi.encode(integerInfo.niA, integerInfo.tA, integerInfo.tB, integerInfo.riA)
 		);
 		bytes32 hashB = keccak256(
 			abi.encode(integerInfo.niB, integerInfo.tA, integerInfo.tB, integerInfo.riB)
 		);
-		if (hashA == integerInfo.infoHashA && hashB == integerInfo.infoHashB)
+
+		// 如果验证正确且以前没有验证过, 执行次数增加
+		personalInteger[sender][receiver][index].hasVerify = true;
+		if (hashA == integerInfo.infoHashA && hashB == integerInfo.infoHashB) {
+			if (!integerInfo.hasVerify) {
+				executeTime[sender]++;
+				executeTime[receiver]++;
+			}
 			return "both true proof";
-		else if (hashA != integerInfo.infoHashA) return "requester false proof";
-		else return "responser false proof";
+		} else if (hashA != integerInfo.infoHashA && hashB == integerInfo.infoHashB) {
+			if (!integerInfo.hasVerify) executeTime[receiver]++;
+			return "req false proof";
+		} else if (hashA == integerInfo.infoHashA && hashB != integerInfo.infoHashB) {
+			if (!integerInfo.hasVerify) executeTime[sender]++;
+			return "res false proof";
+		} else return "both false proof";
+	}
+
+	// 返回所选的随机数
+	function showNum(
+		address sender,
+		address receiver,
+		uint256 index
+	) public view returns (uint256, uint256, uint8) {
+		uint256 len = personalInteger[sender][receiver].length;
+		require(index < len, "error index");
+		IntegerInfo memory integerInfo = personalInteger[sender][receiver][index];
+		return (integerInfo.niA, integerInfo.niB, integerInfo.state);
+	}
+
+	// 重新上传随机数, source区分是请求者(=0)还是响应者(=1)
+	function reuploadNum(
+		address sender,
+		address receiver,
+		uint256 index,
+		uint8 source,
+		uint ni,
+		uint ri
+	) public {
+		// 区分请求者和响应者
+		if (source == 0) require(sender == msg.sender, "not requester");
+		else if (source == 1) require(receiver == msg.sender, "not responder");
+		uint256 len = personalInteger[sender][receiver].length;
+		require(index < len, "error index");
+		IntegerInfo memory integerInfo = personalInteger[sender][receiver][index];
+
+		// 要求双方hash都已经上传, 之后的120s之内没有上传ni ri 或者 上传的ni ri是错的, 正确一方重新上传
+		// 要求hash的原因: 通知对方的socket中断 或者 对方故意不上传
+
+		// hash上传检查
+		require(
+			integerInfo.infoHashA != 0 && integerInfo.infoHashB != 0,
+			"requester or responder message hash not exists"
+		);
+		// 120s检查
+		require(
+			integerInfo.hashTa + 120 seconds < block.timestamp &&
+				integerInfo.hashTb + 120 seconds < block.timestamp,
+			"not exceed 120s"
+		);
+		// 请求者超时, 没有上传或者上传错误的，响应者重传
+		if ((integerInfo.state == 5 || integerInfo.state == 3) && source == 1) {
+			personalInteger[sender][receiver][index].niB = ni;
+			personalInteger[sender][receiver][index].riB = ri;
+			personalInteger[sender][receiver][index].state = 9;
+		}
+		// 响应者超时, 没有上传或者上传错误的, 请求者重传
+		if ((integerInfo.state == 4 || integerInfo.state == 2) && source == 0) {
+			personalInteger[sender][receiver][index].niA = ni;
+			personalInteger[sender][receiver][index].riA = ri;
+			personalInteger[sender][receiver][index].state = 8;
+		}
 	}
 }

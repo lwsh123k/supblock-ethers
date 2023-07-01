@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<!-- 单独上传, 测试使用 -->
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ecc-socketio</title>
+    <style>
+    </style>
+</head>
+
+<body>
+    <div id="addressDiv" style="height: 70px;">
+        <input type="text" id="private_key" placeholder="私钥" />
+        <button type="button" id="getAddressButton">加入</button>
+        <br>
+        <span id="addressSpan"></span>
+    </div>
+
+    <div>
+        <span>Fair Integer Generation (选取随机数, 上传对应的hash):</span>
+        <br>
+        <input type="text" id="receiver" placeholder="receiver address">
+        <button id="reqHashBtn">请求者上传</button>
+        <button id="resHashBtn">响应者上传</button>
+        <span id="genResult"></span>
+        <br>
+    </div>
+    <br>
+    <div>
+        <span>Fair Integer Generation (上传随机数):</span>
+        <br>
+        <input type="text" id="ni" placeholder="ni">
+        <input type="text" id="ri" placeholder="ri">
+        <button id="reqNumBtn">请求者上传</button>
+        <button id="resNumBtn">响应者上传</button>
+        <span id="uploadResult"></span>
+        <br>
+    </div>
+
+    <div>
+        <span>查看选择的随机数</span>
+        <br>
+        <input type="text" id="verify-sender" placeholder="sender address">
+        <input type="text" id="verify-receiver" placeholder="receiver address">
+        <input type="text" id="verify-index" placeholder="index">
+        <button id="showRandomBtn">确定</button>
+    </div>
+    <ul id="messages"></ul>
+
+</body>
+
+</html>

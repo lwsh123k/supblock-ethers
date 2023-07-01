@@ -6,7 +6,11 @@ const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 // npm run dev    npx webpack server
 module.exports = {
     mode: 'development',
-    entry: { myToken: './src/js/myToken.js', sig: './src/js/sig.js' },
+    entry: {
+        myToken: './src/js/myToken.js',
+        sig: './src/js/sig.js',
+        fairIntegerError: './src/js/fairIntegerError.js',
+    },
     output: {
         filename: '[name].js',
         path: path.resolve(__dirname, 'dist'),
@@ -32,6 +36,11 @@ module.exports = {
             filename: 'sig.html',
             template: path.resolve(__dirname, 'src/sigIndex.html'),
             chunks: ['sig'], //配置html需要引入的chunk
+        }),
+        new HtmlWebpackPlugin({
+            filename: 'fairIntegerSep.html',
+            template: path.resolve(__dirname, 'src/fairIntegerError.html'),
+            chunks: ['fairIntegerError'], //配置html需要引入的chunk
         }),
         new NodePolyfillPlugin(),
     ],
