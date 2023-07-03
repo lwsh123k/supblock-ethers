@@ -8,6 +8,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ecc-socketio</title>
     <style>
+        table td,
+        table th {
+            text-align: center;
+        }
     </style>
 </head>
 
@@ -23,8 +27,8 @@
         <span>Fair Integer Generation (选取随机数, 上传对应的hash):</span>
         <br>
         <input type="text" id="receiver" placeholder="receiver address">
-        <button id="reqHashBtn">请求者上传</button>
-        <button id="resHashBtn">响应者上传</button>
+        <button id="reqHashBtn">请求</button>
+        <button id="resHashBtn">响应</button>
         <span id="genResult"></span>
         <br>
     </div>
@@ -34,8 +38,8 @@
         <br>
         <input type="text" id="ni" placeholder="ni">
         <input type="text" id="ri" placeholder="ri">
-        <button id="reqNumBtn">请求者上传</button>
-        <button id="resNumBtn">响应者上传</button>
+        <button id="reqNumBtn">请求</button>
+        <button id="resNumBtn">响应</button>
         <span id="uploadResult"></span>
         <br>
     </div>
@@ -48,6 +52,21 @@
         <input type="text" id="verify-index" placeholder="index">
         <button id="showRandomBtn">确定</button>
     </div>
+    <br>
+    <table id="numTable" border="5" style="display: none;">
+        <thead>
+            <tr>
+                <th></th>
+                <th>ni</th>
+                <th>ta</th>
+                <th>tb</th>
+                <th>ri</th>
+                <th>state</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
     <ul id="messages"></ul>
 
 </body>

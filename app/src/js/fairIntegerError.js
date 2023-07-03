@@ -64,7 +64,7 @@ const sig = {
         this.hash = sigContract.getHash(this.ni, tA, tB, this.ri);
         await sigContract.setReqHash(addressB, this.hash);
         // 监听nb rb
-        sigContract.listenResNum(addressB, this.reuploadIndex);
+        sigContract.listenResNum(addressA, addressB, this.reuploadIndex);
         // 通过socket通知对方上传
         this.socket.emit('req upload hash success', { from: addressA, to: addressB });
         this.addMessage(`ni: ${this.ni}, tA: ${tA}, tB: ${tB}, ri: ${this.ri}, hash: ${this.hash}`);
@@ -82,11 +82,24 @@ const sig = {
         this.ri = sigContract.generateRandomBytes(32);
         this.hash = sigContract.getHash(this.ni, tA, tB, this.ri);
         // 先监听na ra, 再上传hash
-        sigContract.listenReqNum(addressA, this.reuploadIndex);
+        sigContract.listenReqNum(addressA, addressB, this.reuploadIndex);
         await sigContract.setResHash(addressA, this.hash);
 
         // 通过socket通知对方上传成功
         this.socket.emit('res upload hash success', { from: addressB, to: addressA });
+        let table = document.getElementById('numTable');
+        table.style.display = 'table';
+        this.clearTable(table);
+        this.addOneLine(
+            table,
+            '',
+            'ni',
+            'requester execution time',
+            'responder execution time',
+            'ri',
+            'state'
+        );
+        this.addOneLine(table, '请求者', this.ni, tA, tB, this.ri, 'hash已上传');
         this.addMessage(`ni: ${this.ni}, tA: ${tA}, tB: ${tB}, ri: ${this.ri}, hash: ${this.hash}`);
         this.addMessage(`响应者hash:${this.hash}已上传`);
     },
@@ -116,7 +129,9 @@ const sig = {
         let result = await sigContract.showNum(sender, receiver, index);
         let na = result[0].toNumber();
         let nb = result[1].toNumber();
-        console.log(typeof result[2]);
+        console.log(typeof result[2], result[2]);
+        console.log(result[0].toNumber(), result[1].toNumber());
+        console.log(index);
         let state = result[2];
 
         if (state === 1)
@@ -142,6 +157,18 @@ const sig = {
         if (username) {
             this.socket.emit('join', { username: username });
         }
+    },
+
+    // 向表格中增加一行
+    addOneLine(table) {
+        let row = document.createElement('tr');
+        // 第一个参数变量代表table
+        for (let i = 1; i < arguments.length; i++) {
+            let cell = document.createElement('td');
+            cell.innerText = arguments[i];
+            row.appendChild(cell);
+        }
+        table.appendChild(row);
     },
 
     // 添加消息到聊天记录

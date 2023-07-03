@@ -6,7 +6,7 @@ const sigContract = {
     wallet: null,
     singerContract: null,
     contract: null,
-    contractAddress: '0x9a676e781a523b5d0c0e43731313a708cb607508',
+    contractAddress: '0xc6e7df5e7b4f2a278906862b61205850344d4e7d',
 
     abi: [
         'event ReqInfoUpload(address indexed from, address indexed to, uint256 ni, uint256 tA, uint256 tB, uint256 ri, bytes32 infoHash)',
@@ -161,13 +161,18 @@ const sigContract = {
     // 请求者使用：监听响应者ni ri上传事件(source区分是请求者(=0)还是响应者(=1))
     /* 此处ethers.utils.solidityKeccak256函数使用abi.encodePacked进行编码, 但solidity中使用abi.encode进行编码, 
     但由于数据都是32bit的整数倍且数据类型为静态的uint类型, 所以abi.encode不会发生填充, 因此二者结果相同 */
-    async listenResNum(resAddress, reuploadIndex) {
+    async listenResNum(reqAddress, resAddress, reuploadIndex) {
         // 只有provider才有过滤器属性
-        let resFilter = this.contract.filters.ResInfoUpload(null, resAddress);
+        let resFilter = this.contract.filters.ResInfoUpload(reqAddress, resAddress);
+        let listenResult = false; // 是否监听到, 没有监听到, 说明对方没有上传ni ri
+        let isReupload = false; // 是否重新上传了ni ri
+        let newni = Math.floor(Math.random() * 100); // 重新生成ni ri
+        let newri = this.generateRandomBytes(32);
         // console.log('过滤器详情：');
         // console.log(resFilter);
         this.contract
             .once(resFilter, async (from, to, ni, tA, tB, ri, infoHash) => {
+                listenResult = true;
                 let hash = ethers.utils.solidityKeccak256(
                     ['uint256', 'uint256', 'uint256', 'uint256'],
                     [ni, tA, tB, ri]
@@ -175,21 +180,42 @@ const sigContract = {
                 console.log('hash:', hash, typeof hash);
                 console.log('infoHash:', infoHash, typeof infoHash);
                 if (hash != infoHash) {
-                    await this.singerContract.reuploadNum(from, to, reuploadIndex, 0, ni, ri);
+                    await this.singerContract.reuploadNum(from, to, reuploadIndex, 0, newni, newri);
+                    isReupload = true;
                 }
             })
             .once('error', (error) => {
                 console.log(error);
             });
+
+        // 因为上链也需要时间, 如果上链代码一执行就计时, 会导致计时开始的时间和block.timestamp不一致. 所以在150s的基础上增加20s给上链
+        const timeout = 170000;
+        let timeoutId = setTimeout(async () => {
+            this.contract.removeAllListeners(resFilter); // 如果超时，则移除事件监听器
+            if (listenResult === false) {
+                await this.singerContract.reuploadNum(
+                    reqAddress,
+                    resAddress,
+                    reuploadIndex,
+                    0,
+                    newni,
+                    newri
+                );
+                isReupload = true;
+            }
+        }, timeout);
     },
 
     // 响应者使用：监听请求者ni ri上传事件(source区分是请求者(=0)还是响应者(=1))
-    async listenReqNum(reqAddress, reuploadIndex) {
-        let reqFilter = this.contract.filters.ResInfoUpload(reqAddress, null);
-        // console.log('过滤器详情：');
-        // console.log(reqFilter);
+    async listenReqNum(reqAddress, resAddress, reuploadIndex) {
+        let reqFilter = this.contract.filters.ReqInfoUpload(reqAddress, resAddress);
+        let listenResult = false;
+        let isReupload = false;
+        let newni = Math.floor(Math.random() * 100);
+        let newri = this.generateRandomBytes(32);
         this.contract
             .once(reqFilter, async (from, to, ni, tA, tB, ri, infoHash) => {
+                listenResult = true;
                 let hash = ethers.utils.solidityKeccak256(
                     ['uint256', 'uint256', 'uint256', 'uint256'],
                     [ni, tA, tB, ri]
@@ -197,12 +223,46 @@ const sigContract = {
                 console.log('hash:', hash);
                 console.log('infoHash:', infoHash);
                 if (hash != infoHash) {
-                    await this.singerContract.reuploadNum(from, to, reuploadIndex, 1, ni, ri);
+                    await this.singerContract.reuploadNum(from, to, reuploadIndex, 1, newni, newri);
+                    isReupload = true;
                 }
             })
             .once('error', (error) => {
                 console.log(error);
             });
+
+        const timeout = 140000;
+        let timeoutId = setTimeout(async () => {
+            this.contract.removeAllListeners(reqFilter);
+            if (listenResult === false) {
+                await this.singerContract.reuploadNum(
+                    reqAddress,
+                    resAddress,
+                    reuploadIndex,
+                    1,
+                    newni,
+                    newri
+                );
+                isReupload = true;
+            }
+        }, timeout);
+    },
+
+    // 请求者使用：监听响应者hash上传事件(source区分是请求者(=0)还是响应者(=1))
+    async listenResHash(reqAddress, resAddress, ni, ri) {
+        let filter = this.contract.filters.ResHashUpload(reqAddress, resAddress);
+        this.contract
+            .once(filter, async (from, to, infoHashB) => {
+                await this.singerContract.setReqInfo(from, to, ni, ri);
+            })
+            .once('error', (error) => {
+                console.log(error);
+            });
+
+        const timeout = 30000;
+        let timeoutId = setTimeout(() => {
+            this.contract.removeAllListeners(filter);
+        }, timeout);
     },
 };
 
