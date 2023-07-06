@@ -190,9 +190,10 @@ contract FairInteger {
 
 	// 请求者:获取执行次数, 当前数组的下标(从0开始)
 	function getReqExecuteTime(address receiver) public view returns (uint256, uint256, uint256) {
-		uint256 len = personalInteger[msg.sender][receiver].length == 0
-			? 0
-			: personalInteger[msg.sender][receiver].length - 1;
+		// uint256 len = personalInteger[msg.sender][receiver].length == 0
+		// 	? 0
+		// 	: personalInteger[msg.sender][receiver].length - 1;
+		uint256 len = personalInteger[msg.sender][receiver].length;
 		return (executeTime[msg.sender], executeTime[receiver], len);
 	}
 
@@ -295,8 +296,11 @@ contract FairInteger {
 			integerInfo.infoHashA != 0 && integerInfo.infoHashB != 0,
 			"requester or responder message hash not exists"
 		);
-		// 120s检查
-		require(integerInfo.hashTb + 120 seconds < block.timestamp, "not exceed 120s");
+		// 如果双方都在120s内上传, 就不检查:120s, 否则就检查
+		if (integerInfo.riA == 0 || integerInfo.riB == 0) {
+			require(integerInfo.hashTb + 120 seconds < block.timestamp, "not exceed 120s");
+		}
+
 		// 请求者超时, 没有上传或者上传错误的，响应者重传
 		console.log(integerInfo.state);
 		if ((integerInfo.state == 5 || integerInfo.state == 3) && source == 1) {

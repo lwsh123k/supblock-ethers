@@ -6,7 +6,7 @@ const sigContract = {
     wallet: null,
     singerContract: null,
     contract: null,
-    contractAddress: '0xc6e7df5e7b4f2a278906862b61205850344d4e7d',
+    contractAddress: '0x0165878a594ca255338adfa4d48449f69242eb8f',
 
     abi: [
         'event ReqInfoUpload(address indexed from, address indexed to, uint256 ni, uint256 tA, uint256 tB, uint256 ri, bytes32 infoHash)',
@@ -180,6 +180,7 @@ const sigContract = {
                 console.log('hash:', hash, typeof hash);
                 console.log('infoHash:', infoHash, typeof infoHash);
                 if (hash != infoHash) {
+                    console.log(reuploadIndex);
                     await this.singerContract.reuploadNum(from, to, reuploadIndex, 0, newni, newri);
                     isReupload = true;
                 }
