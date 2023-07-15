@@ -97,6 +97,7 @@ contract FairInteger {
 		require(integerInfo.hashTa + 30 seconds >= block.timestamp, "responder not upload in 30s");
 		personalInteger[sender][msg.sender][len - 1].infoHashB = mHash;
 		personalInteger[sender][msg.sender][len - 1].hashTb = block.timestamp;
+		emit ResHashUpload(sender, msg.sender, mHash);
 	}
 
 	// 请求者公开ni, ri.
@@ -107,14 +108,14 @@ contract FairInteger {
 	) public validHash(msg.sender, receiver) {
 		// 要求: 双方的info hash已经设置过
 		// 		 ni ri不能重复设置
-		//		 响应者B的hash上传之后的120s内上传ni, ri
+		//		 响应者B的hash上传之后的60s内上传ni, ri
 		uint256 len = personalInteger[msg.sender][receiver].length;
 		IntegerInfo memory integerInfo = personalInteger[msg.sender][receiver][len - 1];
 		// integerInfo.ri的初始值为0, 为了便于判断ri是否已经上传, 要求证据ri != 0
 		require(ri != 0, "ri is zero");
 		require(integerInfo.riA == 0, "requester ri has existed");
 		require(
-			integerInfo.hashTb + 120 seconds >= block.timestamp,
+			integerInfo.hashTb + 60 seconds >= block.timestamp,
 			"requester ni ri not upload in allowed time"
 		);
 		personalInteger[msg.sender][receiver][len - 1].niA = ni;
@@ -159,7 +160,7 @@ contract FairInteger {
 		require(ri != 0, "ri is zero");
 		require(integerInfo.riB == 0, "responder ri has existed");
 		require(
-			integerInfo.hashTb + 120 seconds >= block.timestamp,
+			integerInfo.hashTb + 60 seconds >= block.timestamp,
 			"responder ni ri not upload in allowed time"
 		);
 		personalInteger[sender][msg.sender][len - 1].niB = ni;
@@ -228,8 +229,8 @@ contract FairInteger {
 		if (integerInfo.hashTb == 0) return "res not upload hash";
 		// 上传了hash, 但ni和ri上传出问题. 验证的时间点 > 等待上传的时间点
 		if (
-			integerInfo.hashTa + 120 seconds >= block.timestamp ||
-			integerInfo.hashTb + 120 seconds >= block.timestamp
+			integerInfo.hashTa + 60 seconds >= block.timestamp ||
+			integerInfo.hashTb + 60 seconds >= block.timestamp
 		) return "verify not in time";
 		// 有一方没有上传
 		if (integerInfo.niA == 0 || integerInfo.riA == 0) return "req not upload ni or ri";
@@ -272,6 +273,13 @@ contract FairInteger {
 		return (integerInfo.niA, integerInfo.niB, integerInfo.state);
 	}
 
+	//获取当前执行的状态
+	function getState(address sender, address receiver, uint256 index) public view returns (uint8) {
+		uint256 len = personalInteger[sender][receiver].length;
+		require(index < len, "error index");
+		return personalInteger[sender][receiver][index].state;
+	}
+
 	// 重新上传随机数, source区分是请求者(=0)还是响应者(=1)
 	function reuploadNum(
 		address sender,
@@ -297,20 +305,28 @@ contract FairInteger {
 			"requester or responder message hash not exists"
 		);
 		// 如果双方都在120s内上传, 就不检查:120s, 否则就检查
-		if (integerInfo.riA == 0 || integerInfo.riB == 0) {
-			require(integerInfo.hashTb + 120 seconds < block.timestamp, "not exceed 120s");
+		// 请求者正确, 另一方未判断;    响应者正确, 另一方未判断    需要满足时间要求才可以修改
+		// 对于请求者错误, 另一方未判断;    响应者错误, 另一方未判断    可以直接修改
+		if (integerInfo.state == 4 || integerInfo.state == 5) {
+			require(integerInfo.hashTb + 60 seconds < block.timestamp, "not exceed 60s");
 		}
 
-		// 请求者超时, 没有上传或者上传错误的，响应者重传
+		// 请求者超时没有上传 或者 上传错误的，响应者重传
 		console.log(integerInfo.state);
-		if ((integerInfo.state == 5 || integerInfo.state == 3) && source == 1) {
+		if (
+			(integerInfo.state == 5 || integerInfo.state == 3 || integerInfo.state == 6) &&
+			source == 1
+		) {
 			console.log("11111");
 			personalInteger[sender][receiver][index].niB = ni;
 			personalInteger[sender][receiver][index].riB = ri;
 			personalInteger[sender][receiver][index].state = 9;
 		}
-		// 响应者超时, 没有上传或者上传错误的, 请求者重传
-		if ((integerInfo.state == 4 || integerInfo.state == 2) && source == 0) {
+		// 响应者超时没有上传 或者 上传错误的, 请求者重传
+		if (
+			(integerInfo.state == 4 || integerInfo.state == 2 || integerInfo.state == 7) &&
+			source == 0
+		) {
 			console.log("22222");
 			personalInteger[sender][receiver][index].niA = ni;
 			personalInteger[sender][receiver][index].riA = ri;

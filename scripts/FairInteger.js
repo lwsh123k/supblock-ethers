@@ -8,11 +8,9 @@ const hre = require('hardhat');
 
 async function main() {
     const FairInteger = await hre.ethers.getContractFactory('FairInteger');
-    console.log(
-        FairInteger.signer.getAddress(),
-        (await FairInteger.signer.getBalance()).toString()
-    );
-    const fairInteger = await FairInteger.deploy();
+    console.log('signer address: ', FairInteger.signer.getAddress());
+    const fairInteger = await FairInteger.deploy(); // 生成部署合约实例, 可以设置参数, 此时合约还没有部署
+    console.log('contract address: ', fairInteger.address);
 
     await fairInteger.deployed();
 }
