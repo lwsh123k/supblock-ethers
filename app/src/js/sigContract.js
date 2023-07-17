@@ -6,13 +6,13 @@ const sigContract = {
     wallet: null,
     singerContract: null,
     contract: null,
-    contractAddress: '0x21dF544947ba3E8b3c32561399E88B52Dc8b2823',
-    timeIds: [],
+    contractAddress: '0x202CCe504e04bEd6fC0521238dDf04Bc9E8E15aB',
+    ListenResTimeIds: [],
 
     abi: [
-        'event ReqInfoUpload(address indexed from, address indexed to, uint256 ni, uint256 tA, uint256 tB, uint256 ri, bytes32 infoHash)',
-        'event ResInfoUpload(address indexed from, address indexed to, uint256 ni, uint256 tA, uint256 tB, uint256 ri, bytes32 infoHash)',
         'event ResHashUpload(address indexed from, address indexed to, bytes32 infoHashB)',
+        'event ReqInfoUpload(address indexed from, address indexed to, uint8 state)',
+        'event ResInfoUpload(address indexed from, address indexed to, uint8 state)',
         'function setReqHash(address receiver, bytes32 mHash) public',
         `function setResHash(address sender, bytes32 mHash) public`,
         `function setReqInfo(address receiver, uint256 ni, uint256 ri) public`,
@@ -42,11 +42,15 @@ const sigContract = {
 
     // 设置请求者hash
     async setReqHash(receiver, mHash) {
+        console.time('gas estimate time');
         let gasEstimate = await this.singerContract.estimateGas.setReqHash(receiver, mHash);
+        console.timeEnd('gas estimate time');
+        console.time('setReqHash time');
         let tx = await this.singerContract.setReqHash(receiver, mHash, {
             gasLimit: (gasEstimate.toNumber() * 1.1).toFixed(0),
         });
         await tx.wait();
+        console.timeEnd('setReqHash time');
     },
 
     // 设置响应者hash
@@ -176,18 +180,10 @@ const sigContract = {
             let resFilter = this.contract.filters.ResInfoUpload(reqAddress, resAddress);
             let listenResult = false; // 是否监听到, 没有监听到, 说明对方没有上传ni ri
             let isReupload = false; // 是否重新上传了ni ri
-            this.timeIds.splice(0, this.timeIds.length);
             this.contract
-                .once(resFilter, async (from, to, ni, tA, tB, ri, infoHash) => {
+                .once(resFilter, async (from, to, state) => {
                     listenResult = true;
-                    let hash = ethers.utils.solidityKeccak256(
-                        ['uint256', 'uint256', 'uint256', 'uint256'],
-                        [ni, tA, tB, ri]
-                    );
-                    console.log('hash:', hash, typeof hash);
-                    console.log('infoHash:', infoHash, typeof infoHash);
-                    if (hash != infoHash) {
-                        console.log(reuploadIndex);
+                    if (state == 2 || state == 7) {
                         await this.singerContract.reuploadNum(
                             from,
                             to,
@@ -198,7 +194,7 @@ const sigContract = {
                         );
                         isReupload = true;
                     }
-                    resolve([isReupload, listenResult]);
+                    resolve([isReupload, listenResult, state]);
                 })
                 .once('error', (error) => {
                     console.log(error);
@@ -206,25 +202,27 @@ const sigContract = {
                 });
 
             // 因为上链也需要时间, 如果上链代码一执行就计时, 会导致计时开始的时间和block.timestamp不一致. 所以在30s(hash) + 120s(ni ri)的基础上增加20s给上链
-            const timeout = 110000; // 30s + 60s +20s
+            const timeout = 100000; // 30s + 60s +10s
             let timeoutId = setTimeout(async () => {
-                this.contract.removeAllListeners(resFilter); // 如果超时，则移除事件监听器
-                let state = await this.getState(reqAddress, resAddress, reuploadIndex);
-                // 监听和超时的resolve只会有一个会执行
+                this.ListenResTimeIds.shift();
                 if (listenResult === false) {
-                    await this.singerContract.reuploadNum(
-                        reqAddress,
-                        resAddress,
-                        reuploadIndex,
-                        0,
-                        newni,
-                        newri
-                    );
-                    isReupload = true;
-                    resolve([isReupload, listenResult]);
+                    this.contract.removeAllListeners(resFilter); // 如果没有监听到(超时), 则移除事件监听器
+                    let state = await this.getState(reqAddress, resAddress, reuploadIndex);
+                    if (state === 4) {
+                        await this.singerContract.reuploadNum(
+                            reqAddress,
+                            resAddress,
+                            reuploadIndex,
+                            0,
+                            newni,
+                            newri
+                        );
+                        isReupload = true;
+                    }
+                    resolve([isReupload, listenResult, state]);
                 }
             }, timeout);
-            this.timeIds.push(timeoutId);
+            this.ListenResTimeIds.push(timeoutId);
         });
     },
 
@@ -235,15 +233,10 @@ const sigContract = {
             let listenResult = false;
             let isReupload = false;
             this.contract
-                .once(reqFilter, async (from, to, ni, tA, tB, ri, infoHash) => {
+                .once(reqFilter, async (from, to, state) => {
                     listenResult = true;
-                    let hash = ethers.utils.solidityKeccak256(
-                        ['uint256', 'uint256', 'uint256', 'uint256'],
-                        [ni, tA, tB, ri]
-                    );
-                    console.log('hash:', hash);
-                    console.log('infoHash:', infoHash);
-                    if (hash != infoHash) {
+                    console.log('响应者监听到了, state: ', state);
+                    if (state == 3 || state == 6) {
                         await this.singerContract.reuploadNum(
                             from,
                             to,
@@ -254,27 +247,31 @@ const sigContract = {
                         );
                         isReupload = true;
                     }
-                    resolve([isReupload, listenResult]);
+                    resolve([isReupload, listenResult, state]);
                 })
                 .once('error', (error) => {
                     console.log(error);
                     reject(error);
                 });
-            // 120s + 20s   60s+20s
-            const timeout = 80000;
+            // 120s + 10s  或者 60s+10s
+            const timeout = 70000;
             let timeoutId = setTimeout(async () => {
-                this.contract.removeAllListeners(reqFilter);
                 if (listenResult === false) {
-                    await this.singerContract.reuploadNum(
-                        reqAddress,
-                        resAddress,
-                        reuploadIndex,
-                        1,
-                        newni,
-                        newri
-                    );
-                    isReupload = true;
-                    resolve([isReupload, listenResult]);
+                    console.log('响应者取消了监听');
+                    this.contract.removeAllListeners(reqFilter);
+                    let state = await this.getState(reqAddress, resAddress, reuploadIndex);
+                    if (state === 5) {
+                        await this.singerContract.reuploadNum(
+                            reqAddress,
+                            resAddress,
+                            reuploadIndex,
+                            1,
+                            newni,
+                            newri
+                        );
+                        isReupload = true;
+                    }
+                    resolve([isReupload, listenResult, state]);
                 }
             }, timeout);
         });
@@ -282,6 +279,38 @@ const sigContract = {
 
     // 请求者使用：监听响应者hash上传事件(source区分是请求者(=0)还是响应者(=1))
     async listenResHash(reqAddress, resAddress, ni, ri) {
+        return new Promise((resolve, reject) => {
+            let filter = this.contract.filters.ResHashUpload(reqAddress, resAddress);
+            let listenResult = false;
+            let isReupload = false;
+            this.contract
+                .once(filter, async (from, to, infoHashB) => {
+                    console.log(Date.now());
+                    listenResult = true;
+                    // await this.singerContract.setReqInfo(from, to, ni, ri);
+                    isReupload = true;
+                    resolve([isReupload, listenResult]);
+                })
+                .once('error', (error) => {
+                    console.log(error);
+                    reject(error);
+                });
+
+            const timeout = 40000; // 30s等待 + 10s上传
+            let timeoutId = setTimeout(() => {
+                if (listenResult === false) {
+                    this.contract.removeAllListeners(); // 如果30s + 10s没有监听到对方上传hash, 需要移除对ni ri的监听
+                    // 移除ni ri超时监听
+                    // console.log(this.ListenResTimeIds.length, this.ListenResTimeIds.length);
+                    clearTimeout(this.ListenResTimeIds.shift());
+                    resolve([isReupload, listenResult]);
+                }
+            }, timeout);
+        });
+    },
+
+    // 监听重新上传事件（放弃，最终选择使用socket实现）////////////////////////未实现///////////////////
+    async listenReupload(reqAddress, resAddress, ni, ri) {
         return new Promise((resolve, reject) => {
             let filter = this.contract.filters.ResHashUpload(reqAddress, resAddress);
             let listenResult = false;
@@ -298,15 +327,14 @@ const sigContract = {
                     reject(error);
                 });
 
-            const timeout = 40000; // 30s等待 + 10s上传
+            const timeout = 40000; // 30s等待 + 10s确认
             let timeoutId = setTimeout(() => {
-                this.contract.removeAllListeners(filter);
+                this.contract.removeAllListeners();
                 if (listenResult === false) {
                     this.contract.removeAllListeners('ResInfoUpload'); // 如果30s + 10s没有监听到对方上传hash, 需要移除对ni ri的监听
                     // 移除ni ri超时监听
-                    while (this.timeIds.length > 0) {
-                        clearTimeout(this.timeIds.pop());
-                    }
+                    // console.log(this.ListenResTimeIds.length);
+                    clearTimeout(this.ListenResTimeIds.shift());
                     resolve([isReupload, listenResult]);
                 }
             }, timeout);

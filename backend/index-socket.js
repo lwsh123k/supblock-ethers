@@ -99,6 +99,20 @@ io.on('connection', function (socket) {
         }
     });
 
+    socket.on('req reupload random number success', function (data) {
+        const toSocket = onlineUsers[data.to];
+        if (toSocket) {
+            toSocket.emit('req reupload random number success', data);
+        }
+    });
+
+    socket.on('res reupload random number success', function (data) {
+        const toSocket = onlineUsers[data.to];
+        if (toSocket) {
+            toSocket.emit('res reupload random number success', data);
+        }
+    });
+
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // 监听请求公钥事件(转发消息)
     socket.on('request hash', function (data) {

@@ -30,25 +30,10 @@ contract FairInteger {
 	}
 
 	// 定义事件, 方便监听检索
-	event ReqInfoUpload(
-		address indexed from,
-		address indexed to,
-		uint256 ni,
-		uint256 tA,
-		uint256 tB,
-		uint256 ri,
-		bytes32 infoHash
-	);
-	event ResInfoUpload(
-		address indexed from,
-		address indexed to,
-		uint256 ni,
-		uint256 tA,
-		uint256 tB,
-		uint256 ri,
-		bytes32 infoHash
-	);
 	event ResHashUpload(address indexed from, address indexed to, bytes32 infoHashB);
+	event ReqInfoUpload(address indexed from, address indexed to, uint8 state);
+	event ResInfoUpload(address indexed from, address indexed to, uint8 state);
+	//event ReuploadRandomNum(address indexed from, address indexed to, uint8 source, uint8 state);
 
 	// 记录成功执行的次数
 	mapping(address => uint256) private executeTime;
@@ -120,15 +105,6 @@ contract FairInteger {
 		);
 		personalInteger[msg.sender][receiver][len - 1].niA = ni;
 		personalInteger[msg.sender][receiver][len - 1].riA = ri;
-		emit ReqInfoUpload(
-			msg.sender,
-			receiver,
-			ni,
-			integerInfo.tA,
-			integerInfo.tB,
-			ri,
-			integerInfo.infoHashA
-		);
 		// 上传时就判断正确性
 		bytes32 hashA = keccak256(abi.encode(ni, integerInfo.tA, integerInfo.tB, ri));
 		uint state = personalInteger[msg.sender][receiver][len - 1].state;
@@ -142,6 +118,12 @@ contract FairInteger {
 			else if (state == 5) personalInteger[msg.sender][receiver][len - 1].state = 3;
 			else if (state == 7) personalInteger[msg.sender][receiver][len - 1].state = 10;
 		}
+		// 记录事件
+		emit ReqInfoUpload(
+			msg.sender,
+			receiver,
+			personalInteger[msg.sender][receiver][len - 1].state
+		);
 	}
 
 	// 响应者公开ni, ri.
@@ -165,15 +147,7 @@ contract FairInteger {
 		);
 		personalInteger[sender][msg.sender][len - 1].niB = ni;
 		personalInteger[sender][msg.sender][len - 1].riB = ri;
-		emit ResInfoUpload(
-			sender,
-			msg.sender,
-			ni,
-			integerInfo.tA,
-			integerInfo.tB,
-			ri,
-			integerInfo.infoHashB
-		);
+
 		// 上传时就判断正确性
 		bytes32 hashB = keccak256(abi.encode(ni, integerInfo.tA, integerInfo.tB, ri));
 		uint state = personalInteger[sender][msg.sender][len - 1].state;
@@ -187,6 +161,7 @@ contract FairInteger {
 			else if (state == 4) personalInteger[sender][msg.sender][len - 1].state = 2;
 			else if (state == 6) personalInteger[sender][msg.sender][len - 1].state = 10;
 		}
+		emit ResInfoUpload(sender, msg.sender, personalInteger[sender][msg.sender][len - 1].state);
 	}
 
 	// 请求者:获取执行次数, 当前数组的下标(从0开始)
