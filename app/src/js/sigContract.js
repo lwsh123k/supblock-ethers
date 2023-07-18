@@ -6,7 +6,7 @@ const sigContract = {
     wallet: null,
     singerContract: null,
     contract: null,
-    contractAddress: '0x202CCe504e04bEd6fC0521238dDf04Bc9E8E15aB',
+    contractAddress: '0xa722bdA6968F50778B973Ae2701e90200C564B49',
     ListenResTimeIds: [],
 
     abi: [
@@ -180,9 +180,37 @@ const sigContract = {
             let resFilter = this.contract.filters.ResInfoUpload(reqAddress, resAddress);
             let listenResult = false; // 是否监听到, 没有监听到, 说明对方没有上传ni ri
             let isReupload = false; // 是否重新上传了ni ri
+
+            // 增加10s原因: 上链代码执行完成时, 需要进行交易确认, 然后才可以通过事件监听查询到
+            // 先设置定时. 如果监听到了, 就取消定时;
+            //            如果没有监听到, 就让定时器取消监听;
+            const timeout = 100000; // 30s + 60s +10s
+            let timeoutId = setTimeout(async () => {
+                this.ListenResTimeIds.shift();
+                if (listenResult === false) {
+                    this.contract.removeAllListeners(); // 如果没有监听到(超时), 则移除事件监听器
+                    let state = await this.getState(reqAddress, resAddress, reuploadIndex);
+                    if (state === 4) {
+                        await this.singerContract.reuploadNum(
+                            reqAddress,
+                            resAddress,
+                            reuploadIndex,
+                            0,
+                            newni,
+                            newri
+                        );
+                        isReupload = true;
+                    }
+                    resolve([isReupload, listenResult, state]);
+                }
+            }, timeout);
+            this.ListenResTimeIds.push(timeoutId);
+
+            // 监听部分
             this.contract
                 .once(resFilter, async (from, to, state) => {
                     listenResult = true;
+                    clearTimeout(this.ListenResTimeIds.shift());
                     if (state == 2 || state == 7) {
                         await this.singerContract.reuploadNum(
                             from,
@@ -200,29 +228,6 @@ const sigContract = {
                     console.log(error);
                     reject(error);
                 });
-
-            // 因为上链也需要时间, 如果上链代码一执行就计时, 会导致计时开始的时间和block.timestamp不一致. 所以在30s(hash) + 120s(ni ri)的基础上增加20s给上链
-            const timeout = 100000; // 30s + 60s +10s
-            let timeoutId = setTimeout(async () => {
-                this.ListenResTimeIds.shift();
-                if (listenResult === false) {
-                    this.contract.removeAllListeners(resFilter); // 如果没有监听到(超时), 则移除事件监听器
-                    let state = await this.getState(reqAddress, resAddress, reuploadIndex);
-                    if (state === 4) {
-                        await this.singerContract.reuploadNum(
-                            reqAddress,
-                            resAddress,
-                            reuploadIndex,
-                            0,
-                            newni,
-                            newri
-                        );
-                        isReupload = true;
-                    }
-                    resolve([isReupload, listenResult, state]);
-                }
-            }, timeout);
-            this.ListenResTimeIds.push(timeoutId);
         });
     },
 
@@ -232,9 +237,32 @@ const sigContract = {
             let reqFilter = this.contract.filters.ReqInfoUpload(reqAddress, resAddress);
             let listenResult = false;
             let isReupload = false;
+            // 设置监听的时间: 120s + 10s  或者 60s+10s
+            const timeout = 70000;
+            let timeoutId = setTimeout(async () => {
+                if (listenResult === false) {
+                    this.contract.removeAllListeners();
+                    let state = await this.getState(reqAddress, resAddress, reuploadIndex);
+                    if (state === 5) {
+                        await this.singerContract.reuploadNum(
+                            reqAddress,
+                            resAddress,
+                            reuploadIndex,
+                            1,
+                            newni,
+                            newri
+                        );
+                        isReupload = true;
+                    }
+                    resolve([isReupload, listenResult, state]);
+                }
+            }, timeout);
+
+            // 监听部分
             this.contract
                 .once(reqFilter, async (from, to, state) => {
                     listenResult = true;
+                    clearTimeout(timeoutId);
                     console.log('响应者监听到了, state: ', state);
                     if (state == 3 || state == 6) {
                         await this.singerContract.reuploadNum(
@@ -253,27 +281,6 @@ const sigContract = {
                     console.log(error);
                     reject(error);
                 });
-            // 120s + 10s  或者 60s+10s
-            const timeout = 70000;
-            let timeoutId = setTimeout(async () => {
-                if (listenResult === false) {
-                    console.log('响应者取消了监听');
-                    this.contract.removeAllListeners(reqFilter);
-                    let state = await this.getState(reqAddress, resAddress, reuploadIndex);
-                    if (state === 5) {
-                        await this.singerContract.reuploadNum(
-                            reqAddress,
-                            resAddress,
-                            reuploadIndex,
-                            1,
-                            newni,
-                            newri
-                        );
-                        isReupload = true;
-                    }
-                    resolve([isReupload, listenResult, state]);
-                }
-            }, timeout);
         });
     },
 
@@ -283,9 +290,21 @@ const sigContract = {
             let filter = this.contract.filters.ResHashUpload(reqAddress, resAddress);
             let listenResult = false;
             let isReupload = false;
+            // 超时取消监听: 30s + 10s
+            const timeout = 40000;
+            let timeoutId = setTimeout(() => {
+                if (listenResult === false) {
+                    // 如果30s + 10s没有监听到对方上传hash, 需要移除对ni ri的监听, 移除ni ri超时监听
+                    this.contract.removeAllListeners();
+                    clearTimeout(this.ListenResTimeIds.shift());
+                    resolve([isReupload, listenResult]);
+                }
+            }, timeout);
+
+            // 监听部分
             this.contract
                 .once(filter, async (from, to, infoHashB) => {
-                    console.log(Date.now());
+                    // console.log('监听到响应者上传hash的时间: ', Date.now());
                     listenResult = true;
                     // await this.singerContract.setReqInfo(from, to, ni, ri);
                     isReupload = true;
@@ -295,17 +314,6 @@ const sigContract = {
                     console.log(error);
                     reject(error);
                 });
-
-            const timeout = 40000; // 30s等待 + 10s上传
-            let timeoutId = setTimeout(() => {
-                if (listenResult === false) {
-                    this.contract.removeAllListeners(); // 如果30s + 10s没有监听到对方上传hash, 需要移除对ni ri的监听
-                    // 移除ni ri超时监听
-                    // console.log(this.ListenResTimeIds.length, this.ListenResTimeIds.length);
-                    clearTimeout(this.ListenResTimeIds.shift());
-                    resolve([isReupload, listenResult]);
-                }
-            }, timeout);
         });
     },
 

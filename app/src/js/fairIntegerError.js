@@ -23,7 +23,9 @@ const sig = {
         //响应者接收：显示请求者上传hash成功
         this.socket.on('req upload hash success', async (data) => {
             this.clearMessage();
+            let table = document.getElementById('numTable');
             this.clearTable(table);
+            table.style.display = 'none';
             document.getElementById('receiver').value = data.from;
             this.addMessage(`请求者 ${data.from}: hash已上传`);
         });
@@ -128,7 +130,7 @@ const sig = {
             .listenResNum(addressA, addressB, this.reuploadIndex, newni, newri)
             .then((result) => {
                 let [isReupload, listenResult, state] = result;
-                // 重新上传, 通知对方, 便于表格展示
+                // 重新上传, 通知对方, 便于对方表格展示
                 if (isReupload === true) {
                     this.socket.emit('req reupload random number success', {
                         from: addressA,
@@ -136,28 +138,31 @@ const sig = {
                         state: state,
                     });
                 }
-
+                // state: 2, 7
                 if (listenResult === true && isReupload === true) {
                     this.addMessage(
                         `响应者上传错误ni ri, 请求者已重新上传, ni: ${newni}, ri: ${newri}`
                     );
                     this.updateOneCell(table, 1, 5, 'ni ri 已重新上传');
                     this.updateOneCell(table, 2, 1, 'ni ri 错误');
+                    // state: 1
                 } else if (listenResult === true && isReupload === false) {
                     this.addMessage(`响应者: ni和ri已上传`);
                     this.updateOneCell(table, 2, 1, 'ni ri已上传');
+                    // state: 4
                 } else if (listenResult === false && isReupload === true) {
                     this.addMessage(
                         `响应者未上传ni ri, 请求者已重新上传, ni: ${newni}, ri: ${newri}`
                     );
                     this.updateOneCell(table, 1, 5, 'ni ri 已重新上传');
                     this.updateOneCell(table, 2, 1, 'ni ri 超时');
+                    // state: 0, 6
                 } else if (listenResult === false && isReupload === false) {
                     if (state === 0) {
                         this.addMessage(`双方都未上传ni ri`);
                         this.updateOneCell(table, 1, 5, 'ni ri 未上传');
                         this.updateOneCell(table, 2, 1, 'ni ri 未上传');
-                    } else {
+                    } else if (state === 6) {
                         this.addMessage(`请求者: 上传错误ni ri`);
                         this.updateOneCell(table, 1, 5, 'ni ri 错误');
                     }
@@ -185,7 +190,7 @@ const sig = {
         document.getElementById('ri').value = this.ri.toString();
         this.hash = sigContract.getHash(this.ni, tA, tB, this.ri);
         await sigContract.setResHash(addressA, this.hash);
-        console.log('响应者上传完成的时间: ', Date.now());
+        // console.log('响应者上传完成的时间: ', Date.now());
         // 监听na ra
         let newni = Math.floor(Math.random() * 100);
         let newri = sigContract.generateRandomBytes(32);
@@ -221,7 +226,7 @@ const sig = {
                         this.addMessage(`双方都未上传ni ri`);
                         this.updateOneCell(table, 1, 1, 'ni ri 未上传');
                         this.updateOneCell(table, 2, 5, 'ni ri 未上传');
-                    } else {
+                    } else if (state === 7) {
                         this.addMessage(`响应者: 上传错误ni ri`);
                         this.updateOneCell(table, 2, 5, 'ni ri ✘');
                     }
