@@ -6,7 +6,7 @@ const sigContract = {
     wallet: null,
     singerContract: null,
     contract: null,
-    contractAddress: '0xa722bdA6968F50778B973Ae2701e90200C564B49',
+    contractAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
     ListenResTimeIds: [],
 
     abi: [

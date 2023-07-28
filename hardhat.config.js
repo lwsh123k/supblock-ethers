@@ -12,6 +12,13 @@ module.exports = {
                 auto: false,
                 interval: [3000, 6000],
             },
+            accounts: {
+                mnemonic: 'test test test test test test test test test test test junk',
+                path: "m/44'/60'/0'/0",
+                initialIndex: 0,
+                count: 301,
+                passphrase: '',
+            },
         },
     },
 };

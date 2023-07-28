@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "bigi": "^1.4.2",
+    "buffer": "^6.0.3",
     "crypto": "^1.0.1",
     "ecurve": "^1.0.6",
     "ethers": "^5.7.2",
