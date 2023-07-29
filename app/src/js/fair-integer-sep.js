@@ -11,6 +11,7 @@ const sig = {
     hash: null,
     reuploadIndex: null,
     myAddress: null,
+    hasShow: false, // 避免socket和ethers.js监听发生先后顺序冲突
 
     start() {
         this.socket = io('http://localhost:3000');
@@ -32,25 +33,14 @@ const sig = {
             this.addMessage(`请求者 ${data.from}: hash已上传`);
         });
 
-        //请求者接收：显示响应者上传hash成功
-        this.socket.on('res upload hash success', async (data) => {
-            this.addMessage(`响应者 ${data.from}: hash已上传`);
-        });
-
-        //响应者接收：显示请求者上传ni ri成功
-        this.socket.on('req reveal random number success', async (data) => {
-            this.addMessage(`请求者: ni和ri已上传`);
-        });
-
-        //请求者接收：显示响应者上传ni ri成功
-        this.socket.on('res reveal random number success', async (data) => {
-            this.addMessage(`响应者: ni和ri已上传`);
-        });
-
         // 响应者接收: 显示req重新上传了随机数, 并展示原因
         this.socket.on('req reupload random number success', async (data) => {
             let state = data.state;
             let table = document.getElementById('numTable');
+            if (!this.hasShow) {
+                this.addMessage(`响应者: ni和ri已上传`);
+                this.hasShow = true;
+            }
             this.addMessage(`请求者: ni和ri已重新上传`);
             this.updateOneCell(table, 1, 1, 'ni ri已重新上传');
 
@@ -66,6 +56,10 @@ const sig = {
         this.socket.on('res reupload random number success', async (data) => {
             let state = data.state;
             let table = document.getElementById('numTable');
+            if (!this.hasShow) {
+                this.addMessage(`请求者: ni和ri已上传`);
+                this.hasShow = true;
+            }
             this.addMessage(`响应者: ni和ri已重新上传`);
             this.updateOneCell(table, 2, 1, 'ni ri已重新上传');
 
@@ -270,11 +264,15 @@ const sig = {
 
     // 请求者上传ni ri
     async uploadNumReq(addressA, addressB, ni, ri) {
+        this.hasShow = false;
         let res = await sigContract.setReqInfo(addressB, ni, ri);
         let table = document.getElementById('numTable');
-        // 通过socket通知对方上传
         if (typeof res === 'boolean' && res === true) {
-            this.addMessage(`请求者: ni和ri已上传`);
+            // 避免socket和ethers.js监听发生先后顺序冲突
+            if (!this.hasShow) {
+                this.addMessage(`请求者: ni和ri已上传`);
+                this.hasShow = true;
+            }
             this.updateOneCell(table, 1, 5, 'ni ri已上传');
             // this.socket.emit('req reveal random number success', { from: addressA, to: addressB });
         } else this.addMessage(res);
@@ -282,11 +280,15 @@ const sig = {
 
     // 响应者上传ni ri
     async uploadNumRes(addressA, addressB, ni, ri) {
+        this.hasShow = false;
         let res = await sigContract.setResInfo(addressA, ni, ri);
         let table = document.getElementById('numTable');
-        // 通过socket通知对方上传
         if (typeof res === 'boolean' && res === true) {
-            this.addMessage(`响应者: ni和ri已上传`);
+            if (!this.hasShow) {
+                this.addMessage(`响应者: ni和ri已上传`);
+                this.hasShow = true;
+            }
+
             this.updateOneCell(table, 2, 5, 'ni ri已上传');
             // this.socket.emit('res reveal random number success', { from: addressB, to: addressA });
         } else this.addMessage(res);
