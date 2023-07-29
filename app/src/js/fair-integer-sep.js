@@ -3,7 +3,7 @@ import ecc from './eccBlind.js';
 import sigContract from './sigContract.js';
 import tokenChain from './token-chain.js';
 
-// 用来模拟上传错误的随机数hash, 一方在规定的时间内不上传
+// 模拟错误上传
 const sig = {
     socket: null,
     ni: null,
@@ -268,7 +268,7 @@ const sig = {
         this.addMessage(`响应者hash已上传`);
     },
 
-    // 请求者公开随机数
+    // 请求者上传ni ri
     async uploadNumReq(addressA, addressB, ni, ri) {
         let res = await sigContract.setReqInfo(addressB, ni, ri);
         let table = document.getElementById('numTable');
@@ -280,7 +280,7 @@ const sig = {
         } else this.addMessage(res);
     },
 
-    // 响应者公开随机数
+    // 响应者上传ni ri
     async uploadNumRes(addressA, addressB, ni, ri) {
         let res = await sigContract.setResInfo(addressA, ni, ri);
         let table = document.getElementById('numTable');

@@ -9,7 +9,7 @@ module.exports = {
     entry: {
         myToken: './src/js/myToken.js',
         sig: './src/js/sig.js',
-        fairIntegerError: './src/js/fairIntegerError.js',
+        fairIntegerSep: './src/js/fair-integer-sep.js',
         fairIntegerAuto: './src/js/fair-integer-auto.js',
     },
     output: {
@@ -40,12 +40,12 @@ module.exports = {
         }),
         new HtmlWebpackPlugin({
             filename: 'fairIntegerSep.html',
-            template: path.resolve(__dirname, 'src/fairIntegerError.html'),
-            chunks: ['fairIntegerError'], //配置html需要引入的chunk
+            template: path.resolve(__dirname, 'src/fairIntegerSep.html'),
+            chunks: ['fairIntegerSep'], //配置html需要引入的chunk
         }),
         new HtmlWebpackPlugin({
             filename: 'fairIntegerAuto.html',
-            template: path.resolve(__dirname, 'src/fair-integer-auto.html'),
+            template: path.resolve(__dirname, 'src/fairIntegerAuto.html'),
             chunks: ['fairIntegerAuto'], //配置html需要引入的chunk
         }),
         new NodePolyfillPlugin(),

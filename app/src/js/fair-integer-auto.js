@@ -3,7 +3,7 @@ import ecc from './eccBlind.js';
 import sigContract from './sigContract.js';
 import tokenChain from './token-chain.js';
 
-// 用来模拟上传错误的随机数hash, 一方在规定的时间内不上传
+// 自动上传
 const sig = {
     socket: null,
     ni: null,
@@ -24,12 +24,16 @@ const sig = {
         //////////////////////////////////fair integer: 显示对方上传成功部分//////////////////////////////////
         //响应者接收：显示请求者上传hash成功
         this.socket.on('req upload hash success', async (data) => {
+            let addressA = data.from;
             this.clearMessage();
             let table = document.getElementById('numTable');
             this.clearTable(table);
             table.style.display = 'none';
             document.getElementById('receiver').value = data.from;
             this.addMessage(`请求者 ${data.from}: hash已上传`);
+            // 自动上传时, 响应者收到对方hash上传成功就: 上传自己的hash; 上传自己的ni ri
+            await this.randomHashRes(addressA, this.myAddress);
+            await this.uploadNumRes(addressA, this.myAddress, this.ni, this.ri);
         });
 
         //请求者接收：显示响应者上传hash成功
@@ -107,8 +111,6 @@ const sig = {
         this.ni = Math.floor(Math.random() * 100);
         // 挑选混淆值ri, 0 <= ri < 2^256
         this.ri = sigContract.generateRandomBytes(32);
-        document.getElementById('ni').value = this.ni.toString();
-        document.getElementById('ri').value = this.ri.toString();
         // 取hash, 上传
         this.hash = sigContract.getHash(this.ni, tA, tB, this.ri);
         await sigContract.setReqHash(addressB, this.hash);
@@ -128,12 +130,14 @@ const sig = {
             'ri',
             'state'
         );
-        sigContract.listenResHash(addressA, addressB, this.ni, this.ri).then((result) => {
+        sigContract.listenResHash(addressA, addressB, this.ni, this.ri).then(async (result) => {
             let [isReupload, listenResult] = result;
             this.clearOneLine(table, 2);
             if (listenResult === true) {
                 this.addMessage(`响应者hash已上传`);
                 this.addOneLine(table, '响应者', 'hash已上传');
+                // 自动上传时, 请求者监听到对方hash上传成功: 上传自己的ni ri; 更新表格状态
+                await this.uploadNumReq(addressA, addressB, this.ni, this.ri);
             } else {
                 this.addMessage(`响应者30s内未上传hash`);
                 this.addOneLine(table, '响应者', '30s内未上传hash');
@@ -199,8 +203,6 @@ const sig = {
 
         this.ni = Math.floor(Math.random() * 100);
         this.ri = sigContract.generateRandomBytes(32);
-        document.getElementById('ni').value = this.ni.toString();
-        document.getElementById('ri').value = this.ri.toString();
         this.hash = sigContract.getHash(this.ni, tA, tB, this.ri);
         await sigContract.setResHash(addressA, this.hash);
         // console.log('响应者上传完成的时间: ', Date.now());
@@ -268,7 +270,7 @@ const sig = {
         this.addMessage(`响应者hash已上传`);
     },
 
-    // 请求者公开随机数
+    // 请求者上传ni ri
     async uploadNumReq(addressA, addressB, ni, ri) {
         let res = await sigContract.setReqInfo(addressB, ni, ri);
         let table = document.getElementById('numTable');
@@ -280,7 +282,7 @@ const sig = {
         } else this.addMessage(res);
     },
 
-    // 响应者公开随机数
+    // 响应者上传ni ri
     async uploadNumRes(addressA, addressB, ni, ri) {
         let res = await sigContract.setResInfo(addressA, ni, ri);
         let table = document.getElementById('numTable');
@@ -473,31 +475,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         let addressA = sigContract.wallet.address;
         let addressB = document.getElementById('receiver').value;
         sig.randomHashReq(addressA, addressB);
-    });
-
-    // 响应者上传hash, 发送成功后通知对方已上传
-    document.querySelector('#resHashBtn').addEventListener('click', () => {
-        let addressA = document.getElementById('receiver').value;
-        let addressB = sigContract.wallet.address;
-        sig.randomHashRes(addressA, addressB);
-    });
-
-    // 请求者上传ni和ri
-    document.querySelector('#reqNumBtn').addEventListener('click', () => {
-        let addressA = sigContract.wallet.address;
-        let addressB = document.getElementById('receiver').value;
-        let ni = document.getElementById('ni').value;
-        let ri = document.getElementById('ri').value;
-        sig.uploadNumReq(addressA, addressB, ni, ri);
-    });
-
-    // 响应者上传ni和ri
-    document.querySelector('#resNumBtn').addEventListener('click', () => {
-        let addressA = document.getElementById('receiver').value;
-        let addressB = sigContract.wallet.address;
-        let ni = document.getElementById('ni').value;
-        let ri = document.getElementById('ri').value;
-        sig.uploadNumRes(addressA, addressB, ni, ri);
     });
 
     // 显示选择的随机数
