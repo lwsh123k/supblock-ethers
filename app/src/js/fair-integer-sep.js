@@ -2,6 +2,7 @@ import { io } from 'socket.io-client';
 import ecc from './eccBlind.js';
 import sigContract from './sigContract.js';
 import tokenChain from './token-chain.js';
+import auth from './auth.js';
 
 // 模拟错误上传
 const sig = {
@@ -16,11 +17,7 @@ const sig = {
     start() {
         this.socket = io('http://localhost:3000');
         ////////////////////////监听事件////////////////////////////////////////
-        // 监听其他用户加入
-        this.socket.on('join', (username) => {
-            // console.log('用户 ' + username + ' 加入了房间');
-            this.addMessage('地址:' + username + '加入了房间');
-        });
+        // 需要很多用户加入, 移除: 监听其他用户加入
 
         //////////////////////////////////fair integer: 显示对方上传成功部分//////////////////////////////////
         //响应者接收：显示请求者上传hash成功
@@ -327,8 +324,22 @@ const sig = {
     },
 
     //////////////////////////////token chain////////////////////////////////////////
-    sendChainData() {
+    // chain initialization
+    sendChainInitialData() {
         let chainData = tokenChain.computeInitialData(3);
+        this.addMessage(
+            `r: ${chainData.r0}, hashForward: ${chainData.hashForward}, hashbackward: ${chainData.hashbackward}, b: ${chainData.b}`
+        );
+        console.log(tokenChain.validatorAccount);
+        this.socket.emit('chain initialization from requester', {
+            from: this.myAddress,
+            to: tokenChain.validatorAccount,
+            chainData,
+        });
+    },
+
+    // chain propagation
+    sendChainPropagationData() {
         this.addMessage(
             `r: ${chainData.r0}, hashForward: ${chainData.hashForward}, hashbackward: ${chainData.hashbackward}, b: ${chainData.b}`
         );
@@ -342,21 +353,22 @@ const sig = {
     //////////////////////////////其他事件////////////////////////////////////////
     // 输入私钥显示账户
     keyConversion(privateKey) {
-        sigContract.getWallet(privateKey);
+        sigContract.setWallet(privateKey);
         this.myAddress = sigContract.wallet.address;
 
         // 显示自己的地址、使用address加入房间
         let addressSpan = document.getElementById('addressSpan');
         addressSpan.innerText = '地址：' + this.myAddress;
-        this.joinRoom(this.myAddress);
+        this.joinRoom(privateKey);
     },
 
-    // 加入房间
-    joinRoom(username) {
-        //const username = document.getElementById('username').value;
-        if (username) {
-            this.socket.emit('join', { username: username });
-        }
+    // 加入socket
+    async joinRoom(privateKey) {
+        let address = sigContract.getAddress(privateKey);
+        let authString = await auth.getAuthString(address);
+        let signedAuthString = await sigContract.getSign(authString, privateKey);
+        console.log(typeof authString, signedAuthString);
+        this.socket.emit('join', { address, signedAuthString });
     },
 
     // 向表格中增加一行
@@ -525,12 +537,11 @@ window.addEventListener('DOMContentLoaded', async () => {
                     const lines = fileContent.split('\r\n');
                     lines.pop();
                     try {
-                        tokenChain.realNameAccount = lines[0];
-                        tokenChain.anonymousAccount = lines[1];
-                        // console.log(lines);
                         if (lines.length > 2 && lines.length !== 102)
                             throw new Error('上传文件格式错误');
-                        else tokenChain.tempAccount = lines.slice(2);
+                        tokenChain.realNameAccount = lines[0];
+                        tokenChain.anonymousAccount = lines[1];
+                        tokenChain.tempAccount = lines.slice(2);
                         this.keyConversion(tokenChain.realNameAccount);
                     } catch (e) {
                         console.log(e);
@@ -544,6 +555,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // 发送链初始化数据
     document.querySelector('#sendChainDataBtn').addEventListener('click', () => {
-        sig.sendChainData();
+        sig.sendChainInitialData();
     });
 });

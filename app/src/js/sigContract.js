@@ -34,8 +34,8 @@ const sigContract = {
         this.contract = new ethers.Contract(this.contractAddress, this.abi, this.provider);
     },
 
-    // 获取wallet类
-    getWallet(private_key) {
+    // 设置wallet类
+    setWallet(private_key) {
         this.wallet = new ethers.Wallet(private_key, this.provider);
         this.singerContract = this.contract.connect(this.wallet);
     },
@@ -169,6 +169,19 @@ const sigContract = {
             [ni, ta, tb, ri]
         );
         return hash;
+    },
+
+    // 计算签名
+    async getSign(data, privateKey) {
+        let wallet = new ethers.Wallet(privateKey, this.provider);
+        let signedData = await wallet.signMessage(data);
+        return signedData;
+    },
+
+    // 计算地址
+    getAddress(privateKey) {
+        let wallet = new ethers.Wallet(privateKey, this.provider);
+        return wallet.address;
     },
 
     // 请求者使用：监听响应者ni ri上传事件(source区分是请求者(=0)还是响应者(=1))
