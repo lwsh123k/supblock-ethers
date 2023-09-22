@@ -14,6 +14,7 @@ const tokenChain = {
     hashBackward: [],
     chainLength: 3,
     relayIndex: 0, // 向第几个relay发送数据
+    relayReceivedData: {}, // relay收到的数据
 
     // 对任意个数的参数取hash
     keccak256(...args) {
