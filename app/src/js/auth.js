@@ -10,7 +10,7 @@ const auth = {
                 address: address,
             });
             this.authString = response.data.message;
-            console.log(this.authString);
+            // console.log(this.authString);
             return this.authString;
         } catch (error) {
             console.error('Error get auth string:', error.message);

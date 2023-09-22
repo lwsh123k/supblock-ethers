@@ -8,8 +8,8 @@ const sig = {
     ri: null,
     hash: null,
 
-    start() {
-        this.socket = io('http://localhost:3000');
+    start(socket) {
+        this.socket = socket;
         ////////////////////////监听事件////////////////////////////////////////
         // 监听其他用户加入
         this.socket.on('join', (username) => {

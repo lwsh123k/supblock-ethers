@@ -11,6 +11,7 @@ module.exports = {
         sig: './src/js/sig.js',
         fairIntegerSep: './src/js/fair-integer-sep.js',
         fairIntegerAuto: './src/js/fair-integer-auto.js',
+        main: './src/js/main.js',
     },
     output: {
         filename: '[name].js',
@@ -41,7 +42,8 @@ module.exports = {
         new HtmlWebpackPlugin({
             filename: 'fairIntegerSep.html',
             template: path.resolve(__dirname, 'src/fairIntegerSep.html'),
-            chunks: ['fairIntegerSep'], //配置html需要引入的chunk
+            // chunks: ['fairIntegerSep'], //配置html需要引入的chunk
+            chunks: ['main'],
         }),
         new HtmlWebpackPlugin({
             filename: 'fairIntegerAuto.html',

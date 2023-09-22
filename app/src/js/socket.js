@@ -1,23 +1,17 @@
 import { io } from 'socket.io-client';
-import sigContract from './sigContract.js';
-import auth from './auth.js';
 
 class SocketModule {
+    // 单例模式
     constructor() {
-        this.socket = io('http://localhost:3000');
+        if (!SocketModule.instance) {
+            this.socket = this.socket = io('http://localhost:3000');
+            SocketModule.instance = this;
+        }
+        return SocketModule.instance;
     }
 
-    // 加入socket
-    async joinRoom(privateKey) {
-        let address = sigContract.getAddress(privateKey);
-        let authString = await auth.getAuthString(address);
-        let signedAuthString = await sigContract.getSign(authString, privateKey);
-        console.log(typeof authString, signedAuthString);
-        this.socket.emit('join', { address, signedAuthString });
-    }
-
-    send(message) {
-        this.socket.emit('message', message);
+    send(event, data) {
+        this.socket.emit(event, data);
     }
 
     receive(callback) {
@@ -43,4 +37,4 @@ class SocketModule {
     }
 }
 
-module.exports = SocketModule;
+export { SocketModule };

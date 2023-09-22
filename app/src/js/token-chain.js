@@ -16,6 +16,10 @@ const tokenChain = {
     relayIndex: 0, // 向第几个relay发送数据
     relayReceivedData: {}, // relay收到的数据
 
+    init(socket) {
+        this.socket = socket;
+    },
+
     // 对任意个数的参数取hash
     keccak256(...args) {
         let hash = createKeccakHash('keccak256');
