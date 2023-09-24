@@ -5,7 +5,7 @@ import tokenChain from './token-chain.js';
 import auth from './auth.js';
 
 // 模拟错误上传
-const sig = {
+const FairInteger = {
     socket: null,
     ni: null,
     ri: null,
@@ -68,15 +68,6 @@ const sig = {
         });
 
         //////////////////////////////////token chain: //////////////////////////////////
-        this.socket.on('chain initialization from requester', (data) => {
-            let chainData = data.chainData;
-            this.addMessage(
-                `r: ${chainData.r0}, hashForward: ${chainData.hashForward}, hashbackward: ${chainData.hashbackward}, b: ${chainData.b}`
-            );
-            let result = tokenChain.validateData(chainData.r0, chainData.hashForward);
-            if (result) this.addMessage('chain initialization data is correct');
-            else this.addMessage('chain initialization data is false');
-        });
 
         // 监听 对方不在线 事件
         this.socket.on('not online', (data) => {
@@ -130,7 +121,7 @@ const sig = {
                 this.addOneLine(table, '响应者', '30s内未上传hash');
             }
         }, null);
-        sigContract
+        let listenResResult = sigContract
             .listenResNum(addressA, addressB, this.reuploadIndex, newni, newri)
             .then((result) => {
                 let [isReupload, listenResult, state] = result;
@@ -179,6 +170,7 @@ const sig = {
         this.clearMessage();
         this.addMessage(`ni: ${this.ni}, tA: ${tA}, tB: ${tB}, ri: ${this.ri}, hash: ${this.hash}`);
         this.addMessage(`请求者hash已上传`);
+        return listenResResult;
     },
 
     // 响应者上传hash
@@ -199,7 +191,7 @@ const sig = {
         let newni = Math.floor(Math.random() * 100);
         let newri = sigContract.generateRandomBytes(32);
 
-        sigContract
+        let listenReqResult = sigContract
             .listenReqNum(addressA, addressB, this.reuploadIndex, newni, newri)
             .then((result) => {
                 let [isReupload, listenResult, state] = result;
@@ -257,6 +249,7 @@ const sig = {
 
         this.addMessage(`ni: ${this.ni}, tA: ${tA}, tB: ${tB}, ri: ${this.ri}, hash: ${this.hash}`);
         this.addMessage(`响应者hash已上传`);
+        return listenReqResult;
     },
 
     // 请求者上传ni ri
@@ -470,4 +463,4 @@ const sig = {
     },
 };
 
-export default sig;
+export default FairInteger;

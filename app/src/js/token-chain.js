@@ -1,3 +1,4 @@
+import FairInteger from './fair-integer-sep';
 const createKeccakHash = require('keccak');
 import { Buffer } from 'buffer';
 
@@ -14,10 +15,28 @@ const tokenChain = {
     hashBackward: [],
     chainLength: 3,
     relayIndex: 0, // 向第几个relay发送数据
-    relayReceivedData: {}, // relay收到的数据
+    relayReceivedData: {
+        dataFromApp: {},
+        dataFromPreRelay: {},
+    }, // relay收到的数据
 
     init(socket) {
         this.socket = socket;
+        socket.on('applicant to relay', (data) => {
+            this.relayReceivedData.dataFromApp = data;
+        });
+        socket.on('pre relay to next relay', (data) => {
+            this.relayReceivedData.dataFromPreRelay = data;
+        });
+        this.socket.on('chain initialization request', (data) => {
+            this.relayReceivedData.dataFromApp = data;
+            FairInteger.addMessage(
+                `r: ${data.r}, hashForward: ${data.hf}, hashbackward: ${data.hb}, b: ${data.b}`
+            );
+            let result = tokenChain.validateData(chainData.r0, chainData.hashForward);
+            if (result) FairInteger.addMessage('chain initialization data is correct');
+            else FairInteger.addMessage('chain initialization data is false');
+        });
     },
 
     // 对任意个数的参数取hash
@@ -84,19 +103,35 @@ const tokenChain = {
             b: this.b[0],
         };
     },
+    // 请求者: 公平随机数生成, 向relay发送数据
+    reqUploadHash(addressA, addressB) {
+        let listenResResult = FairInteger.randomHashReq(addressA, addressB);
+        listenResResult.then((relayAccount) => {
+            this.sendApp2RelayData(this.relayIndex, relayAccount);
+        }, null);
+    },
+    reqUploadNum(addressA, addressB) {},
 
+    // 响应者: 公平随机数生成, 向relay发送数据
+    resUploadHash(addressA, addressB) {
+        let listenReqResult = FairInteger.randomHashRes(addressA, addressB);
+        listenReqResult.then((relayAccount) => {
+            this.sendToNextRelay(relayAccount);
+        }, null);
+    },
+    resUploadNum() {},
     // applicant向relay发送数据
-    getApp2RelayData() {
-        relayIndex = this.relayIndex;
+    sendApp2RelayData(relayIndex, applicantTempAccount, relayAccount) {
+        let data = null;
         if (relayIndex === 0)
-            return {
+            data = {
                 r: this.r[0],
                 hf: this.hashForward[0],
                 hb: this.hashBackward[0],
                 b: this.b[0],
             };
         else if (relayIndex >= 1 && relayIndex <= this.chainLength - 1)
-            return {
+            data = {
                 account: this.selectedTempAccount[relayIndex],
                 r: this.r[relayIndex],
                 hf: this.hashForward[relayIndex],
@@ -105,7 +140,7 @@ const tokenChain = {
                 c: 100,
             };
         else if (relayIndex === this.chainLength)
-            return {
+            data = {
                 account: this.selectedTempAccount[relayIndex],
                 r: this.r[relayIndex],
                 hf: this.hashForward[relayIndex],
@@ -113,28 +148,47 @@ const tokenChain = {
                 c: 100,
             };
         else if (relayIndex === this.chainLength + 1)
-            return {
+            data = {
                 account: this.selectedTempAccount[relayIndex],
                 r: this.r[relayIndex],
                 hf: this.hashForward[relayIndex],
                 hb: this.hashBackward[relayIndex],
             };
         else if (relayIndex === this.chainLength + 2)
-            return {
+            data = {
                 account: this.selectedTempAccount[relayIndex],
                 r: this.r[relayIndex],
             };
+        this.socket.emit('applicant to relay', {
+            ...data,
+            from: applicantTempAccount,
+            to: relayAccount,
+        });
     },
 
     // relay向applicant发送数据
     sendRelay2AppData() {},
     //  前一个relay向后一个relay发送数据
-    sendToNextRelay() {},
+    sendToNextRelay() {
+        let data = null;
+        data = this.socket.emit('pre relay to next relay', {
+            ...data,
+            from: applicantTempAccount,
+            to: relayAccount,
+        });
+    },
     // 后一个relay向前一个relay发送响应数据
     SendToPreRelay() {},
-    // 验证数据
-    validateData(r0, hashForward) {
-        return hashForward === this.keccak256(this.validatorAccount, r0);
+
+    // 验证正向hash
+    verifyHashForward(applicantTempAccount, r, currentHash, PreHash) {
+        if (PreHash === undefined) return currentHash === this.keccak256(applicantTempAccount, r);
+        else return currentHash === this.keccak256(applicantTempAccount, r, PreHash);
+    },
+    // 验证反向hash
+    verifyHashBackward(applicantTempAccount, r, currentHash, nextHash) {
+        if (nextHash === undefined) return currentHash === this.keccak256(applicantTempAccount, r);
+        else return currentHash === this.keccak256(applicantTempAccount, r, nextHash);
     },
 };
 
