@@ -4,10 +4,9 @@ import { Buffer } from 'buffer';
 
 // token chain用到的函数
 const tokenChain = {
-    realNameAccount: null,
-    anonymousAccount: null,
-    tempAccount: null,
-    selectedTempAccount: null,
+    accounts: [], // real-name and anonymous account
+    tempAccount: [], // all temp accounts -> selected temp accounts
+    selectedTempAccount: [],
     validatorAccount: '0x863218e6ADad41bC3c2cb4463E26B625564ea3Ba',
     r: [],
     b: [],
@@ -16,6 +15,7 @@ const tokenChain = {
     chainLength: 3,
     relayIndex: 0, // 向第几个relay发送数据
     relayReceivedData: {
+        readyToVerify: { appData: false, preRelayData: false },
         dataFromApp: {},
         dataFromPreRelay: {},
     }, // relay收到的数据
@@ -23,17 +23,21 @@ const tokenChain = {
     init(socket) {
         this.socket = socket;
         socket.on('applicant to relay', (data) => {
+            console.log(data);
             this.relayReceivedData.dataFromApp = data;
+            this.relayReceivedData.readyToVerify.appData = true;
         });
         socket.on('pre relay to next relay', (data) => {
+            console.log(data);
             this.relayReceivedData.dataFromPreRelay = data;
+            this.relayReceivedData.readyToVerify.preRelayData = true;
         });
-        this.socket.on('chain initialization request', (data) => {
+        socket.on('chain initialization request', (data) => {
             this.relayReceivedData.dataFromApp = data;
             FairInteger.addMessage(
                 `r: ${data.r}, hashForward: ${data.hf}, hashbackward: ${data.hb}, b: ${data.b}`
             );
-            let result = tokenChain.validateData(chainData.r0, chainData.hashForward);
+            let result = tokenChain.verifyHashForward(data.from, data.r, data.hf);
             if (result) FairInteger.addMessage('chain initialization data is correct');
             else FairInteger.addMessage('chain initialization data is false');
         });
@@ -66,48 +70,52 @@ const tokenChain = {
             // selectedTempAccount: 100个账户中只会用到一部分
             let randomIndex = Math.floor(Math.random() * 100);
             this.selectedTempAccount.push(this.tempAccount[randomIndex]);
-
             // b: fair-integer选出随机数之后, 加b, mod n
             this.b.push(Math.floor(Math.random() * 100));
-
             // r: hash时混淆
             this.r.push(this.generateRandomByte(32));
         }
         // selectedTempAccount中第一个账户为real name account
         this.selectedTempAccount.pop();
-        this.selectedTempAccount.unshift(this.realNameAccount);
+        this.selectedTempAccount.unshift(this.accounts[0]);
 
         // 计算hash
-        this.hashForward.push(this.keccak256(this.selectedTempAccount[0], this.r[0]));
+        this.hashForward.push(this.keccak256(this.selectedTempAccount[0].address, this.r[0]));
         for (let i = 1; i <= this.chainLength + 1; i++) {
             this.hashForward.push(
-                this.keccak256(this.selectedTempAccount[i], this.r[i], this.hashForward[i - 1])
+                this.keccak256(
+                    this.selectedTempAccount[i].address,
+                    this.r[i],
+                    this.hashForward[i - 1]
+                )
             );
         }
         this.hashBackward.unshift(
             this.keccak256(
-                this.selectedTempAccount[this.chainLength + 2],
+                this.selectedTempAccount[this.chainLength + 2].address,
                 this.r[this.chainLength + 2]
             )
         );
         // 计算反向hash时, 每次都将数据放到数组头部
         for (let i = this.chainLength; i >= 0; i--) {
             this.hashBackward.unshift(
-                this.keccak256(this.selectedTempAccount[i + 1], this.r[i + 1], this.hashBackward[0])
+                this.keccak256(
+                    this.selectedTempAccount[i + 1].address,
+                    this.r[i + 1],
+                    this.hashBackward[0]
+                )
             );
         }
-        return {
-            r0: this.r[0],
-            hashForward: this.hashForward[0],
-            hashBackward: this.hashBackward[0],
-            b: this.b[0],
-        };
     },
     // 请求者: 公平随机数生成, 向relay发送数据
     reqUploadHash(addressA, addressB) {
         let listenResResult = FairInteger.randomHashReq(addressA, addressB);
         listenResResult.then((relayAccount) => {
-            this.sendApp2RelayData(this.relayIndex, relayAccount);
+            this.sendApp2RelayData(
+                this.relayIndex,
+                this.selectedTempAccount[this.relayIndex],
+                relayAccount
+            );
         }, null);
     },
     reqUploadNum(addressA, addressB) {},
@@ -116,21 +124,30 @@ const tokenChain = {
     resUploadHash(addressA, addressB) {
         let listenReqResult = FairInteger.randomHashRes(addressA, addressB);
         listenReqResult.then((relayAccount) => {
-            this.sendToNextRelay(relayAccount);
+            let anonymousAccount =
+                this.accounts.length === 1 ? this.accounts[0].address : this.accounts[1].address;
+            this.sendToNextRelay(anonymousAccount, relayAccount);
         }, null);
     },
     resUploadNum() {},
     // applicant向relay发送数据
     sendApp2RelayData(relayIndex, applicantTempAccount, relayAccount) {
         let data = null;
-        if (relayIndex === 0)
+        if (relayIndex === 0) {
             data = {
                 r: this.r[0],
                 hf: this.hashForward[0],
                 hb: this.hashBackward[0],
                 b: this.b[0],
             };
-        else if (relayIndex >= 1 && relayIndex <= this.chainLength - 1)
+            this.socket.emit('chain initialization request', {
+                ...data,
+                from: applicantTempAccount,
+                to: relayAccount,
+            });
+            this.relayIndex++;
+            return;
+        } else if (relayIndex >= 1 && relayIndex <= this.chainLength - 1)
             data = {
                 account: this.selectedTempAccount[relayIndex],
                 r: this.r[relayIndex],
@@ -164,16 +181,17 @@ const tokenChain = {
             from: applicantTempAccount,
             to: relayAccount,
         });
+        this.relayIndex++;
     },
 
     // relay向applicant发送数据
     sendRelay2AppData() {},
     //  前一个relay向后一个relay发送数据
-    sendToNextRelay() {
-        let data = null;
-        data = this.socket.emit('pre relay to next relay', {
+    sendToNextRelay(preRelayAccount, relayAccount) {
+        let data = this.relayReceivedData.dataFromApp;
+        this.socket.emit('pre relay to next relay', {
             ...data,
-            from: applicantTempAccount,
+            from: preRelayAccount,
             to: relayAccount,
         });
     },

@@ -42,7 +42,7 @@ io.on('connection', function (socket) {
             let res =
                 address === ethers.utils.verifyMessage(authString.get(address), signedAuthString);
             if (res) {
-                console.log('用户 ' + address + ' 加入');
+                // console.log('用户 ' + address + ' 加入');
                 onlineUsers[address] = socket;
             }
         }
@@ -53,6 +53,7 @@ io.on('connection', function (socket) {
         if (eventName === 'join') return;
         const toSocket = onlineUsers[data.to];
         if (toSocket) {
+            console.log(data.from, '   ', data.to, data);
             toSocket.emit(eventName, data);
         }
     });

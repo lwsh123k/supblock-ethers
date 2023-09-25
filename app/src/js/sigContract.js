@@ -180,8 +180,8 @@ const sigContract = {
 
     // 计算地址
     getAddress(privateKey) {
-        let wallet = new ethers.Wallet(privateKey, this.provider);
-        return wallet.address;
+        let address = ethers.utils.computeAddress(privateKey);
+        return address;
     },
 
     // 请求者使用：监听响应者ni ri上传事件(source区分是请求者(=0)还是响应者(=1))

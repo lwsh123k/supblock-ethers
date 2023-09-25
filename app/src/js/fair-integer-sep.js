@@ -14,8 +14,8 @@ const FairInteger = {
     myAddress: null,
     hasShow: false, // 避免socket和ethers.js监听发生先后顺序冲突
 
-    start() {
-        this.socket = io('http://localhost:3000');
+    start(socket) {
+        this.socket = socket;
         ////////////////////////监听事件////////////////////////////////////////
         // 需要很多用户加入, 移除: 监听其他用户加入
 
@@ -162,6 +162,7 @@ const FairInteger = {
                         this.updateOneCell(table, 1, 5, 'ni ri 错误');
                     }
                 }
+                return '0x70997970C51812dc3A010C7d01b50e0d17dc79C8';
             }, null);
         // 通过socket通知对方上传
         this.socket.emit('req upload hash success', { from: addressA, to: addressB });
@@ -169,7 +170,7 @@ const FairInteger = {
 
         this.clearMessage();
         this.addMessage(`ni: ${this.ni}, tA: ${tA}, tB: ${tB}, ri: ${this.ri}, hash: ${this.hash}`);
-        this.addMessage(`请求者hash已上传`);
+        this.addMessage(`请求者${addressA}:hash已上传`);
         return listenResResult;
     },
 
@@ -227,6 +228,7 @@ const FairInteger = {
                         this.updateOneCell(table, 2, 5, 'ni ri ✘');
                     }
                 }
+                return '0x70997970C51812dc3A010C7d01b50e0d17dc79C8';
             }, null);
 
         // 通过socket通知对方上传成功
