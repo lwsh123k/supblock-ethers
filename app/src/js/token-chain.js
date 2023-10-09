@@ -1,6 +1,8 @@
 import FairInteger from './fair-integer-sep';
 const createKeccakHash = require('keccak');
 import { Buffer } from 'buffer';
+import PublicKeyEncrypt from './public-key-encrypt';
+import storeMsgContract from './strore-msg-contract';
 
 // token chain用到的函数
 const tokenChain = {
@@ -111,11 +113,13 @@ const tokenChain = {
     reqUploadHash(addressA, addressB) {
         let listenResResult = FairInteger.randomHashReq(addressA, addressB);
         listenResResult.then((relayAccount) => {
-            this.sendApp2RelayData(
+            let data = this.getApp2RelayData(
                 this.relayIndex,
                 this.selectedTempAccount[this.relayIndex],
                 relayAccount
             );
+            let encryptedData = PublicKeyEncrypt.getEncryptData(data);
+            storeMsgContract.setApp2RelayData();
         }, null);
     },
     reqUploadNum(addressA, addressB) {},
@@ -130,58 +134,44 @@ const tokenChain = {
         }, null);
     },
     resUploadNum() {},
+
     // applicant向relay发送数据
-    sendApp2RelayData(relayIndex, applicantTempAccount, relayAccount) {
-        let data = null;
+    getApp2RelayData(relayIndex, applicantTempAccount, relayAccount) {
+        let data = {
+            account: null,
+            r: null,
+            hf: null,
+            hb: null,
+            b: null,
+            c: null,
+        };
         if (relayIndex === 0) {
-            data = {
-                r: this.r[0],
-                hf: this.hashForward[0],
-                hb: this.hashBackward[0],
-                b: this.b[0],
-            };
-            this.socket.emit('chain initialization request', {
-                ...data,
-                from: applicantTempAccount,
-                to: relayAccount,
-            });
-            this.relayIndex++;
-            return;
-        } else if (relayIndex >= 1 && relayIndex <= this.chainLength - 1)
-            data = {
-                account: this.selectedTempAccount[relayIndex],
-                r: this.r[relayIndex],
-                hf: this.hashForward[relayIndex],
-                hb: this.hashBackward[relayIndex],
-                b: this.b[relayIndex],
-                c: 100,
-            };
-        else if (relayIndex === this.chainLength)
-            data = {
-                account: this.selectedTempAccount[relayIndex],
-                r: this.r[relayIndex],
-                hf: this.hashForward[relayIndex],
-                hb: this.hashBackward[relayIndex],
-                c: 100,
-            };
-        else if (relayIndex === this.chainLength + 1)
-            data = {
-                account: this.selectedTempAccount[relayIndex],
-                r: this.r[relayIndex],
-                hf: this.hashForward[relayIndex],
-                hb: this.hashBackward[relayIndex],
-            };
-        else if (relayIndex === this.chainLength + 2)
-            data = {
-                account: this.selectedTempAccount[relayIndex],
-                r: this.r[relayIndex],
-            };
-        this.socket.emit('applicant to relay', {
-            ...data,
-            from: applicantTempAccount,
-            to: relayAccount,
-        });
-        this.relayIndex++;
+            data.r = this.r[0];
+            data.hf = this.hashForward[0];
+            data.hb = this.hashBackward[0];
+            data.b = this.b[0];
+        } else if (relayIndex >= 1 && relayIndex <= this.chainLength - 1) {
+            data.account = this.selectedTempAccount[relayIndex];
+            data.r = this.r[relayIndex];
+            data.hf = this.hashForward[relayIndex];
+            data.hb = this.hashBackward[relayIndex];
+            data.b = this.b[relayIndex];
+            data.c = 100;
+        } else if (relayIndex === this.chainLength) {
+            (data.account = this.selectedTempAccount[relayIndex]), (data.r = this.r[relayIndex]);
+            data.hf = this.hashForward[relayIndex];
+            data.hb = this.hashBackward[relayIndex];
+            data.c = 100;
+        } else if (relayIndex === this.chainLength + 1) {
+            data.account = this.selectedTempAccount[relayIndex];
+            data.r = this.r[relayIndex];
+            data.hf = this.hashForward[relayIndex];
+            data.hb = this.hashBackward[relayIndex];
+        } else if (relayIndex === this.chainLength + 2) {
+            data.account = this.selectedTempAccount[relayIndex];
+            data.r = this.r[relayIndex];
+        }
+        return data;
     },
 
     // relay向applicant发送数据
