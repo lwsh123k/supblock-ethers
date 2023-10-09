@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import contractAddress from './contractAddress.json';
 
 const sigContract = {
     // 创建 Web3Provider 对象
@@ -6,7 +7,7 @@ const sigContract = {
     wallet: null,
     singerContract: null,
     contract: null,
-    contractAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+    contractAddress: contractAddress.FairIntegerContract,
     ListenResTimeIds: [],
 
     abi: [

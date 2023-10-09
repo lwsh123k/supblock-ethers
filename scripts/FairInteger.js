@@ -5,12 +5,15 @@
 // will compile your contracts, add the Hardhat Runtime Environment's members to the
 // global scope, and execute the script.
 const hre = require('hardhat');
+const writeAddress = require('./write-contract-address.js');
 
 async function main() {
     const FairInteger = await hre.ethers.getContractFactory('FairInteger');
-    console.log('signer address: ', FairInteger.signer.getAddress());
-    const fairInteger = await FairInteger.deploy(); // 生成部署合约实例, 可以设置参数, 此时合约还没有部署
+    console.log('signer address: ', FairInteger.signer.address);
+    // 生成部署合约实例, 可以设置参数, 此时合约还没有部署
+    const fairInteger = await FairInteger.deploy();
     console.log('contract address: ', fairInteger.address);
+    writeAddress.writeContractAddress('FairIntegerContract', fairInteger.address);
 
     await fairInteger.deployed();
 }
