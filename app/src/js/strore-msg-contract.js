@@ -40,6 +40,7 @@ const storeMsgContract = {
     },
 
     // 上传applicant to relay的加密数据
+    // 以anonymous account的身份发送数据
     async setApp2RelayData(senderAddress, receiverAddress, data) {},
     // 设置请求者hash
     async setReqHash(receiver, mHash) {
