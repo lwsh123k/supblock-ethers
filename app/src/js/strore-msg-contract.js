@@ -9,19 +9,12 @@ const storeMsgContract = {
     ListenResTimeIds: [],
 
     abi: [
-        'event ResHashUpload(address indexed from, address indexed to, bytes32 infoHashB)',
-        'event ReqInfoUpload(address indexed from, address indexed to, uint8 state)',
-        'event ResInfoUpload(address indexed from, address indexed to, uint8 state)',
-        'function setReqHash(address receiver, bytes32 mHash) public',
-        `function setResHash(address sender, bytes32 mHash) public`,
-        `function setReqInfo(address receiver, uint256 ni, uint256 ri) public`,
-        `function setResInfo(address sender, uint256 ni, uint256 ri) public`,
-        'function getReqExecuteTime(address receiver) public view returns (uint256, uint256, uint256)',
-        'function getResExecuteTime(address sender) public view returns (uint256, uint256, uint256)',
-        `function verifyInfo(address sender, address receiver, uint256 index) public view returns (string memory)`,
-        'function reuploadNum(address sender, address receiver, uint256 index, uint8 source, uint ni, uint ri) public',
-        'function showNum(address sender, address receiver, uint256 index) public view returns (uint256, uint256, uint8)',
-        'function getState(address sender, address receiver, uint256 index) public view returns (uint8)',
+        'event App2RelayDataEvent(address indexed from, address indexed to, bytes data)',
+        'event Data2NextRelayEvent(address indexed from, address indexed to, bytes data)',
+        'function setApp2RelayData(address receiver, bytes memory data) public',
+        `function getApp2RelayData(address sender, address receiver, uint index) public view returns (bytes memory)`,
+        'function setData2NextRelay(address receiver, bytes memory data) public',
+        'function getData2NextRelay(address sender, address receiver, uint index) public view returns (bytes memory)',
     ],
 
     // 初始化
@@ -41,7 +34,59 @@ const storeMsgContract = {
 
     // 上传applicant to relay的加密数据
     // 以anonymous account的身份发送数据
-    async setApp2RelayData(senderAddress, receiverAddress, data) {},
+    async setApp2RelayData(senderAddress, receiverAddress, data) {
+        let gasEstimate = await this.singerContract.estimateGas.setApp2RelayData(
+            receiverAddress,
+            data
+        );
+        let tx = await this.singerContract.setApp2RelayData(receiverAddress, data, {
+            gasLimit: (gasEstimate.toNumber() * 1.1).toFixed(0),
+        });
+        await tx.wait();
+    },
+
+    // get applicant to relay data
+    async getApp2RelayData(sender, receiver, index) {
+        let result = await this.singerContract.getApp2RelayData(sender, receiver, index);
+        console.log(result);
+        return result;
+    },
+
+    // set relay to next relay data
+    async setData2NextRelay(senderAddress, receiverAddress, data) {
+        let gasEstimate = await this.singerContract.estimateGas.Data2NextRelay(
+            receiverAddress,
+            data
+        );
+        let tx = await this.singerContract.Data2NextRelay(receiverAddress, data, {
+            gasLimit: (gasEstimate.toNumber() * 1.1).toFixed(0),
+        });
+        await tx.wait();
+    },
+
+    // get relay to next relay data
+    async getData2NextRelay(sender, receiver, index) {
+        let result = await this.singerContract.getData2NextRelay(sender, receiver, index);
+        console.log(result);
+        return result;
+    },
+    // 监听applicant to relay data
+    // 设置监听频率: 依赖于eth节点
+    async listenApp2RelayData(myAddress) {
+        return new Promise((resolve, reject) => {
+            let resFilter = this.contract.filters.App2RelayDataEvent(null, myAddress);
+            // 监听部分
+            this.contract
+                .on(resFilter, async (from, to, data) => {
+                    resolve({ from, to, data });
+                })
+                .once('error', (error) => {
+                    console.log(error);
+                    reject(error);
+                });
+        });
+    },
+
     // 设置请求者hash
     async setReqHash(receiver, mHash) {
         console.time('gas estimate time');
