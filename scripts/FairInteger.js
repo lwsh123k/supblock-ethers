@@ -8,6 +8,7 @@ const hre = require('hardhat');
 const writeAddress = require('./write-contract-address.js');
 
 async function main() {
+    // hardhat自带ethers.js
     const FairInteger = await hre.ethers.getContractFactory('FairInteger');
     console.log('signer address: ', FairInteger.signer.address);
     // 生成部署合约实例, 可以设置参数, 此时合约还没有部署
