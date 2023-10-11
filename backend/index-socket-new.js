@@ -4,12 +4,12 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const { ethers } = require('ethers');
-
+const PublicKeyRouter = require('./router/publickey');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: ['http://127.0.0.1:5500', 'http://localhost:8000'],
+        origin: ['http://127.0.0.1:5500', 'http://localhost:8000', '*'],
     },
 });
 
@@ -29,6 +29,8 @@ app.post('/getAuthString', (req, res) => {
     }
     res.json({ message: authString.get(address) });
 });
+// 获取公钥
+app.use('/', PublicKeyRouter);
 
 const onlineUsers = {};
 io.on('connection', function (socket) {
