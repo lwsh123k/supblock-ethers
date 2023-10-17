@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 import ecc from './eccBlind.js';
-import sigContract from './sigContract.js';
+import sigContract from './contract-interaction/fair-integer-contract.js';
 
 const sig = {
     socket: null,

@@ -24,7 +24,7 @@ async function insertDocs() {
             let realNameKey = data.split('\n')[0].trim();
             let publicKey = EthCrypto.publicKeyByPrivateKey(realNameKey);
             let address = EthCrypto.publicKey.toAddress(publicKey);
-            docs.push({ i, publicKey, address });
+            docs.push({ i: i - 1, publicKey, address });
         }
         console.log(docs.length);
         // 插入数据到数据库

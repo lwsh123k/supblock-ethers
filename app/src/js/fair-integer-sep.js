@@ -1,8 +1,8 @@
 import { io } from 'socket.io-client';
 import ecc from './eccBlind.js';
-import sigContract from './sigContract.js';
+import sigContract from './contract-interaction/fair-integer-contract.js';
 import tokenChain from './token-chain.js';
-import auth from './auth.js';
+import auth from './network-request.js';
 
 // 模拟错误上传
 const FairInteger = {
@@ -10,12 +10,12 @@ const FairInteger = {
     ni: null,
     ri: null,
     hash: null,
-    reuploadIndex: null,
     myAddress: null,
     hasShow: false, // 避免socket和ethers.js监听发生先后顺序冲突
 
-    start(socket) {
+    start(socket, provider) {
         this.socket = socket;
+        sigContract.start(provider);
         ////////////////////////监听事件////////////////////////////////////////
         // 需要很多用户加入, 移除: 监听其他用户加入
 
@@ -67,8 +67,6 @@ const FairInteger = {
             }
         });
 
-        //////////////////////////////////token chain: //////////////////////////////////
-
         // 监听 对方不在线 事件
         this.socket.on('not online', (data) => {
             console.log('用户 ' + data.from + ' 发送了私聊消息给 ' + data.to + ': ' + data.message);
@@ -76,14 +74,19 @@ const FairInteger = {
         });
     },
 
+    // 设置wallet
+    setWallet(private_key) {
+        sigContract.setWallet(private_key);
+    },
+
     //////////////////////////////////hash ni ri上传部分//////////////////////////////////
     // 请求者上传hash
     async randomHashReq(addressA, addressB) {
-        // 获取双方已经成功执行的次数
+        // 获取双方已经成功执行的次数, dataIndex用于重新上传时使用
         let result = await sigContract.getReqExecuteTime(addressB);
         let tA = result[0].toNumber();
         let tB = result[1].toNumber();
-        this.reuploadIndex = result[2].toNumber();
+        let dataIndex = result[2].toNumber();
 
         // 挑选随机数ni, 0 <= ni < 100. Math.random()方法返回一个0（包括）到1（不包括）之间的随机浮点数
         this.ni = Math.floor(Math.random() * 100);
@@ -110,8 +113,8 @@ const FairInteger = {
             'ri',
             'state'
         );
-        sigContract.listenResHash(addressA, addressB, this.ni, this.ri).then((result) => {
-            let [isReupload, listenResult] = result;
+        sigContract.listenResHash(addressA, addressB).then((result) => {
+            let [listenResult] = result;
             this.clearOneLine(table, 2);
             if (listenResult === true) {
                 this.addMessage(`响应者hash已上传`);
@@ -122,8 +125,8 @@ const FairInteger = {
             }
         }, null);
         let listenResResult = sigContract
-            .listenResNum(addressA, addressB, this.reuploadIndex, newni, newri)
-            .then((result) => {
+            .listenResNum(addressA, addressB, dataIndex, newni, newri)
+            .then(async (result) => {
                 let [isReupload, listenResult, state] = result;
                 // 重新上传, 通知对方, 便于对方表格展示
                 if (isReupload === true) {
@@ -162,7 +165,13 @@ const FairInteger = {
                         this.updateOneCell(table, 1, 5, 'ni ri 错误');
                     }
                 }
-                return '0x70997970C51812dc3A010C7d01b50e0d17dc79C8';
+                let showNumResult = await sigContract.showNum(addressA, addressB, dataIndex);
+                let fairIntegerNumber =
+                    (showNumResult[0].toNumber() + showNumResult[1].toNumber()) % 100;
+                console.log(showNumResult[0].toNumber(), showNumResult[1].toNumber());
+                console.log('fairIntegerNumber: ', fairIntegerNumber);
+                fairIntegerNumber = 2;
+                return fairIntegerNumber;
             }, null);
         // 通过socket通知对方上传
         this.socket.emit('req upload hash success', { from: addressA, to: addressB });
@@ -179,7 +188,7 @@ const FairInteger = {
         let result = await sigContract.getResExecuteTime(addressA);
         let tA = result[0].toNumber();
         let tB = result[1].toNumber();
-        this.reuploadIndex = result[2].toNumber();
+        let dataIndex = result[2].toNumber();
 
         this.ni = Math.floor(Math.random() * 100);
         this.ri = sigContract.generateRandomBytes(32);
@@ -193,8 +202,8 @@ const FairInteger = {
         let newri = sigContract.generateRandomBytes(32);
 
         let listenReqResult = sigContract
-            .listenReqNum(addressA, addressB, this.reuploadIndex, newni, newri)
-            .then((result) => {
+            .listenReqNum(addressA, addressB, dataIndex, newni, newri)
+            .then(async (result) => {
                 let [isReupload, listenResult, state] = result;
                 if (isReupload === true) {
                     this.socket.emit('res reupload random number success', {
@@ -228,7 +237,11 @@ const FairInteger = {
                         this.updateOneCell(table, 2, 5, 'ni ri ✘');
                     }
                 }
-                return '0x70997970C51812dc3A010C7d01b50e0d17dc79C8';
+                let showNumResult = await sigContract.showNum(addressA, addressB, dataIndex);
+                let fairIntegerNumber =
+                    (showNumResult[0].toNumber() + showNumResult[1].toNumber()) % 100;
+                fairIntegerNumber = 2;
+                return fairIntegerNumber;
             }, null);
 
         // 通过socket通知对方上传成功
@@ -255,7 +268,8 @@ const FairInteger = {
     },
 
     // 请求者上传ni ri
-    async uploadNumReq(addressA, addressB, ni, ri) {
+    // 此处ni ri作为参数传入, 是为了方便模拟错误ni ri
+    async reqUploadNum(addressB, ni, ri) {
         this.hasShow = false;
         let res = await sigContract.setReqInfo(addressB, ni, ri);
         let table = document.getElementById('numTable');
@@ -271,7 +285,7 @@ const FairInteger = {
     },
 
     // 响应者上传ni ri
-    async uploadNumRes(addressA, addressB, ni, ri) {
+    async resUploadNum(addressA, ni, ri) {
         this.hasShow = false;
         let res = await sigContract.setResInfo(addressA, ni, ri);
         let table = document.getElementById('numTable');

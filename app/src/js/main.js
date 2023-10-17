@@ -1,8 +1,9 @@
 import FairInteger from './fair-integer-sep';
-import sigContract from './sigContract.js';
-import { SocketModule } from './socket.js';
+import sigContract from './contract-interaction/fair-integer-contract.js';
+import storeMsgContract from './contract-interaction/strore-msg-contract';
+import { SharedConnector } from './shared-connector.js';
 import tokenChain from './token-chain';
-import auth from './auth.js';
+import networkRequest from './network-request.js';
 
 const app = {
     init(socket) {
@@ -12,7 +13,7 @@ const app = {
     // 通过签名认证并加入socket
     async joinRoom(privateKey) {
         let address = sigContract.getAddress(privateKey);
-        let authString = await auth.getAuthString(address);
+        let authString = await networkRequest.getAuthString(address);
         let signedAuthString = await sigContract.getSign(authString, privateKey);
         this.socket.emit('join', { address, signedAuthString });
     },
@@ -34,12 +35,18 @@ const app = {
                     let realNameAccountKey = lines[0];
                     let anonymousAccountKey = lines[1];
                     let tempAccountKey = lines.slice(2);
-                    // 处理real name account key
+                    // 同时保留账户的key 和 address
+                    // 处理real name account key, 对于validator， real name accout = anonymous account
                     await this.joinRoom(realNameAccountKey);
                     tokenChain.accounts.push({
                         key: realNameAccountKey,
                         address: sigContract.getAddress(realNameAccountKey),
                     });
+                    if (!anonymousAccountKey)
+                        tokenChain.accounts.push({
+                            key: realNameAccountKey,
+                            address: sigContract.getAddress(realNameAccountKey),
+                        });
                     // 处理anonymous account key
                     if (anonymousAccountKey) {
                         await this.joinRoom(anonymousAccountKey);
@@ -70,6 +77,10 @@ const app = {
                             addressSpan.innerText += `      ${item.address} \n`;
                         });
                     }
+
+                    // 开启监听
+                    tokenChain.listenAppData();
+                    tokenChain.listenPreRelayData();
                 } catch (e) {
                     console.log(e);
                 }
@@ -80,11 +91,11 @@ const app = {
 
 window.addEventListener('DOMContentLoaded', async () => {
     // 初始化
-    let socket = new SocketModule().socket;
-    FairInteger.start(socket);
-    tokenChain.init(socket);
+    let sharedConnector = new SharedConnector();
+    let socket = sharedConnector.getSocket('http://localhost:3000');
+    let provider = sharedConnector.getProvider('http://localhost:8545');
+    tokenChain.init(socket, provider);
     app.init(socket);
-    sigContract.start();
 
     // 输入私钥(0x...), 连接钱包, 获得地址, 加入socket, 设置为ecc私钥
     document.querySelector('#getAddressButton').addEventListener('click', async function () {
@@ -97,41 +108,30 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // 请求者上传hash
     document.querySelector('#reqHashBtn').addEventListener('click', () => {
-        sigContract.setWallet(tokenChain.selectedTempAccount[tokenChain.relayIndex].key);
-        let addressA = sigContract.wallet.address;
         let addressB = document.getElementById('receiver').value;
-        // sig.randomHashReq(addressA, addressB);
-        tokenChain.reqUploadHash(addressA, addressB);
+        tokenChain.reqUploadHash(addressB);
     });
 
     // 响应者上传hash
     document.querySelector('#resHashBtn').addEventListener('click', () => {
-        // 使用匿名地址连接钱包, 如果是applicant, 每次进行fair integer generation时需要更换为selected temp account
-        tokenChain.accounts.length === 1
-            ? sigContract.setWallet(tokenChain.accounts[0].key)
-            : sigContract.setWallet(tokenChain.accounts[1].key);
         let addressA = document.getElementById('receiver').value;
-        let addressB = sigContract.wallet.address;
-        // sig.randomHashRes(addressA, addressB);
-        tokenChain.resUploadHash(addressA, addressB);
+        tokenChain.resUploadHash(addressA);
     });
 
     // 请求者上传ni和ri
     document.querySelector('#reqNumBtn').addEventListener('click', () => {
-        let addressA = sigContract.wallet.address;
         let addressB = document.getElementById('receiver').value;
         let ni = document.getElementById('ni').value;
         let ri = document.getElementById('ri').value;
-        FairInteger.uploadNumReq(addressA, addressB, ni, ri);
+        tokenChain.reqUploadNum(addressB, ni, ri);
     });
 
     // 响应者上传ni和ri
     document.querySelector('#resNumBtn').addEventListener('click', () => {
         let addressA = document.getElementById('receiver').value;
-        let addressB = sigContract.wallet.address;
         let ni = document.getElementById('ni').value;
         let ri = document.getElementById('ri').value;
-        FairInteger.uploadNumRes(addressA, addressB, ni, ri);
+        tokenChain.resUploadNum(addressA, ni, ri);
     });
 
     // 显示选择的随机数
@@ -139,7 +139,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         let sender = document.getElementById('verify-sender').value;
         let receiver = document.getElementById('verify-receiver').value;
         let index = document.getElementById('verify-index').value;
-        FairInteger.showRandom(sender, receiver, index);
+        tokenChain.FairInteger.showRandom(sender, receiver, index);
     });
 
     // 通过文件读取私钥
@@ -149,10 +149,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // 发送链初始化数据
     document.querySelector('#sendChainDataBtn').addEventListener('click', () => {
-        tokenChain.sendApp2RelayData(
-            0,
-            tokenChain.selectedTempAccount[0].address,
-            tokenChain.validatorAccount
-        );
+        tokenChain.sendInitialData();
     });
 });

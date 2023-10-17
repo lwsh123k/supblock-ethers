@@ -27,11 +27,8 @@ const sigContract = {
     ],
 
     // 初始化
-    async start() {
-        if (window.ethereum) this.provider = new ethers.providers.Web3Provider(window.ethereum);
-        // else this.provider = new ethers.providers.JsonRpcProvider('http://localhost:7545');
-        else this.provider = new ethers.providers.JsonRpcProvider('http://localhost:8545');
-
+    async start(provider) {
+        this.provider = provider;
         this.contract = new ethers.Contract(this.contractAddress, this.abi, this.provider);
     },
 
@@ -299,11 +296,10 @@ const sigContract = {
     },
 
     // 请求者使用：监听响应者hash上传事件(source区分是请求者(=0)还是响应者(=1))
-    async listenResHash(reqAddress, resAddress, ni, ri) {
+    async listenResHash(addressA, addressB) {
         return new Promise((resolve, reject) => {
-            let filter = this.contract.filters.ResHashUpload(reqAddress, resAddress);
+            let filter = this.contract.filters.ResHashUpload(addressA, addressB);
             let listenResult = false;
-            let isReupload = false;
             // 超时取消监听: 30s + 10s
             const timeout = 40000;
             let timeoutId = setTimeout(() => {
@@ -311,18 +307,15 @@ const sigContract = {
                     // 如果30s + 10s没有监听到对方上传hash, 需要移除对ni ri的监听, 移除ni ri超时监听
                     this.contract.removeAllListeners();
                     clearTimeout(this.ListenResTimeIds.shift());
-                    resolve([isReupload, listenResult]);
+                    resolve([listenResult]);
                 }
             }, timeout);
 
             // 监听部分
             this.contract
-                .once(filter, async (from, to, infoHashB) => {
-                    // console.log('监听到响应者上传hash的时间: ', Date.now());
+                .once(filter, async (addressA, addressB, infoHashB) => {
                     listenResult = true;
-                    // await this.singerContract.setReqInfo(from, to, ni, ri);
-                    isReupload = true;
-                    resolve([isReupload, listenResult]);
+                    resolve([listenResult]);
                 })
                 .once('error', (error) => {
                     console.log(error);

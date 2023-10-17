@@ -1,12 +1,13 @@
 import FairInteger from './fair-integer-sep';
 const createKeccakHash = require('keccak');
 import { Buffer } from 'buffer';
-import PublicKeyEncrypt from './public-key-encrypt';
-import storeMsgContract from './strore-msg-contract';
+import PublicKeyEncrypt from './encrypt';
+import networkRequest from './network-request';
+import storeMsg from './contract-data-process/store-msg';
 
 // token chain用到的函数
 const tokenChain = {
-    accounts: [], // real-name and anonymous account
+    accounts: [], // real-name and anonymous account(sava key and address)
     tempAccount: [], // all temp accounts -> selected temp accounts
     selectedTempAccount: [],
     validatorAccount: '0x863218e6ADad41bC3c2cb4463E26B625564ea3Ba',
@@ -22,8 +23,14 @@ const tokenChain = {
         dataFromPreRelay: {},
     }, // relay收到的数据
 
-    init(socket) {
+    init(socket, provider) {
         this.socket = socket;
+        // 将FairInteger和storeMsg添加到本对象上是为了导出时, 其中的变量还可以访问
+        // 在具体使用时, FairInteger和storeMsg都是引用, this
+        this.FairInteger = FairInteger;
+        this.storeMsg = storeMsg;
+        FairInteger.start(socket, provider);
+        storeMsg.start(socket, provider);
         socket.on('applicant to relay', (data) => {
             console.log(data);
             this.relayReceivedData.dataFromApp = data;
@@ -39,6 +46,7 @@ const tokenChain = {
             FairInteger.addMessage(
                 `r: ${data.r}, hashForward: ${data.hf}, hashbackward: ${data.hb}, b: ${data.b}`
             );
+            console.log(data);
             let result = tokenChain.verifyHashForward(data.from, data.r, data.hf);
             if (result) FairInteger.addMessage('chain initialization data is correct');
             else FairInteger.addMessage('chain initialization data is false');
@@ -109,36 +117,63 @@ const tokenChain = {
             );
         }
     },
+
     // 请求者: 公平随机数生成, 向relay发送数据
-    reqUploadHash(addressA, addressB) {
-        let listenResResult = FairInteger.randomHashReq(addressA, addressB);
-        listenResResult.then((relayAccount) => {
-            let data = this.getApp2RelayData(
-                this.relayIndex,
-                this.selectedTempAccount[this.relayIndex],
-                relayAccount
-            );
-            let encryptedData = PublicKeyEncrypt.getEncryptData(data);
-            storeMsgContract.setApp2RelayData();
-        }, null);
+    // 使用匿名地址连接钱包, 如果是applicant, 每次进行fair integer generation时需要更换为selected temp account
+    async reqUploadHash(addressB) {
+        this.setWallet(this.selectedTempAccount[this.relayIndex].key);
+        let fairIntegerNumber = await FairInteger.randomHashReq(
+            this.selectedTempAccount[this.relayIndex].address,
+            addressB
+        );
+        // 选完随机数后, relay index++, 表示当前relay已经结束
+        this.relayIndex++;
+        let data = this.getApp2RelayData(this.relayIndex);
+        let accountInfo = await networkRequest.getAccountInfo(fairIntegerNumber);
+        console.log(accountInfo);
+        let encryptedData = await PublicKeyEncrypt.getEncryptData(accountInfo.publicKey, data);
+        let receiverAddress = accountInfo.address;
+        await storeMsg.setApp2RelayData(receiverAddress, encryptedData);
     },
-    reqUploadNum(addressA, addressB) {},
 
     // 响应者: 公平随机数生成, 向relay发送数据
-    resUploadHash(addressA, addressB) {
-        let listenReqResult = FairInteger.randomHashRes(addressA, addressB);
-        listenReqResult.then((relayAccount) => {
-            let anonymousAccount =
-                this.accounts.length === 1 ? this.accounts[0].address : this.accounts[1].address;
-            this.sendToNextRelay(anonymousAccount, relayAccount);
+    resUploadHash(addressA) {
+        this.setWallet(this.accounts[1].key);
+        let listenReqResult = FairInteger.randomHashRes(addressA, this.accounts[1].address);
+        listenReqResult.then(async (fairIntegerNumber) => {
+            let data = this.getPre2NextData();
+            let accountInfo = await networkRequest.getAccountInfo(fairIntegerNumber);
+            let encryptedData = await PublicKeyEncrypt.getEncryptData(accountInfo.publicKey, data);
+            let receiverAddress = accountInfo.address;
+            await storeMsg.setData2NextRelay(receiverAddress, encryptedData);
         }, null);
     },
-    resUploadNum() {},
+
+    // 请求者上传ni ri
+    reqUploadNum(addressB, ni, ri) {
+        FairInteger.reqUploadNum(addressB, ni, ri);
+    },
+
+    // 响应者上传ni ri
+    resUploadNum(addressA, ni, ri) {
+        FairInteger.resUploadNum(addressA, ni, ri);
+    },
+
+    // relay listening data from applicant
+    async listenAppData() {
+        // 发送方(applicant and pre relay)使用anonymous account, 接收方使用real name account接收(此时发送方并不知道接收方的anonymous account)
+        storeMsg.listenAppData(this.accounts[0].key, this.accounts[0].address);
+    },
+
+    // relay listening data from pre relay
+    async listenPreRelayData() {
+        storeMsg.listenPreRelayData(this.accounts[0].key, this.accounts[0].address);
+    },
 
     // applicant向relay发送数据
-    getApp2RelayData(relayIndex, applicantTempAccount, relayAccount) {
+    getApp2RelayData(relayIndex) {
         let data = {
-            account: null,
+            from: null,
             r: null,
             hf: null,
             hb: null,
@@ -151,24 +186,24 @@ const tokenChain = {
             data.hb = this.hashBackward[0];
             data.b = this.b[0];
         } else if (relayIndex >= 1 && relayIndex <= this.chainLength - 1) {
-            data.account = this.selectedTempAccount[relayIndex];
+            data.from = this.selectedTempAccount[relayIndex];
             data.r = this.r[relayIndex];
             data.hf = this.hashForward[relayIndex];
             data.hb = this.hashBackward[relayIndex];
             data.b = this.b[relayIndex];
             data.c = 100;
         } else if (relayIndex === this.chainLength) {
-            (data.account = this.selectedTempAccount[relayIndex]), (data.r = this.r[relayIndex]);
+            (data.from = this.selectedTempAccount[relayIndex]), (data.r = this.r[relayIndex]);
             data.hf = this.hashForward[relayIndex];
             data.hb = this.hashBackward[relayIndex];
             data.c = 100;
         } else if (relayIndex === this.chainLength + 1) {
-            data.account = this.selectedTempAccount[relayIndex];
+            data.from = this.selectedTempAccount[relayIndex];
             data.r = this.r[relayIndex];
             data.hf = this.hashForward[relayIndex];
             data.hb = this.hashBackward[relayIndex];
         } else if (relayIndex === this.chainLength + 2) {
-            data.account = this.selectedTempAccount[relayIndex];
+            data.from = this.selectedTempAccount[relayIndex];
             data.r = this.r[relayIndex];
         }
         return data;
@@ -177,16 +212,20 @@ const tokenChain = {
     // relay向applicant发送数据
     sendRelay2AppData() {},
     //  前一个relay向后一个relay发送数据
-    sendToNextRelay(preRelayAccount, relayAccount) {
+    getPre2NextData(preRelayAccount, relayAccount) {
         let data = this.relayReceivedData.dataFromApp;
-        this.socket.emit('pre relay to next relay', {
-            ...data,
-            from: preRelayAccount,
-            to: relayAccount,
-        });
+        return data;
     },
     // 后一个relay向前一个relay发送响应数据
     SendToPreRelay() {},
+
+    // send chain initial data
+    sendInitialData() {
+        let data = this.getApp2RelayData(0);
+        data.from = this.selectedTempAccount[0].address;
+        data.to = this.validatorAccount;
+        this.socket.emit('chain initialization request', data);
+    },
 
     // 验证正向hash
     verifyHashForward(applicantTempAccount, r, currentHash, PreHash) {
@@ -197,6 +236,13 @@ const tokenChain = {
     verifyHashBackward(applicantTempAccount, r, currentHash, nextHash) {
         if (nextHash === undefined) return currentHash === this.keccak256(applicantTempAccount, r);
         else return currentHash === this.keccak256(applicantTempAccount, r, nextHash);
+    },
+
+    // 重写fair-integer中的方法, 使其可以更换账号, 发送不同的交易
+    // 重新设置连接eth的私钥
+    setWallet(private_key) {
+        FairInteger.setWallet(private_key);
+        storeMsg.setWallet(private_key);
     },
 };
 

@@ -11,6 +11,7 @@ const client = new MongoClient(uri);
 // get public key and address
 router.post('/getAccountInfo', async (req, res) => {
     let index = req.body.index;
+    console.log(index);
     let info = null;
     try {
         await client.connect();
@@ -19,7 +20,6 @@ router.post('/getAccountInfo', async (req, res) => {
         let query = { i: index };
         let option = { projection: { _id: 0 } };
         info = await pkdocument.findOne(query, option);
-        console.log(info);
     } finally {
         await client.close();
     }

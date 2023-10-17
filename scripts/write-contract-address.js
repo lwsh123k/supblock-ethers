@@ -2,8 +2,8 @@ const fs = require('fs');
 const path = require('path');
 
 const fileName = 'contractAddress.json';
-const filePath = path.join(__dirname, '..', 'app/src/js', fileName);
-// d:\code\supblock-ethers\app\js\contractAddresses.js
+const filePath = path.join(__dirname, '..', 'app/src/js/contract-interaction', fileName);
+// d:\code\supblock-ethers\app\js\contract-interaction\contractAddresses.js
 // console.log(filePath);
 
 // 指定合约名, 合约地址

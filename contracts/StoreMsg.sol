@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract PublicKeyStorage {
+contract StoreMsg {
 	// 只存储实名用户的公钥
 	mapping(address => bytes) public publicKeys;
 

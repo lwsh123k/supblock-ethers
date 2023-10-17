@@ -1,11 +1,12 @@
 import { ethers } from 'ethers';
+import contractAddress from './contractAddress.json';
 
 const storeMsgContract = {
     provider: null,
     wallet: null,
     singerContract: null,
     contract: null,
-    contractAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+    contractAddress: contractAddress.StoreMsgContract,
     ListenResTimeIds: [],
 
     abi: [
@@ -18,11 +19,8 @@ const storeMsgContract = {
     ],
 
     // 初始化
-    async start() {
-        if (window.ethereum) this.provider = new ethers.providers.Web3Provider(window.ethereum);
-        // else this.provider = new ethers.providers.JsonRpcProvider('http://localhost:7545');
-        else this.provider = new ethers.providers.JsonRpcProvider('http://localhost:8545');
-
+    async start(provider) {
+        this.provider = provider;
         this.contract = new ethers.Contract(this.contractAddress, this.abi, this.provider);
     },
 
@@ -34,12 +32,12 @@ const storeMsgContract = {
 
     // 上传applicant to relay的加密数据
     // 以anonymous account的身份发送数据
-    async setApp2RelayData(senderAddress, receiverAddress, data) {
+    async setApp2RelayData(receiverAddress, encryptedData) {
         let gasEstimate = await this.singerContract.estimateGas.setApp2RelayData(
             receiverAddress,
-            data
+            encryptedData
         );
-        let tx = await this.singerContract.setApp2RelayData(receiverAddress, data, {
+        let tx = await this.singerContract.setApp2RelayData(receiverAddress, encryptedData, {
             gasLimit: (gasEstimate.toNumber() * 1.1).toFixed(0),
         });
         await tx.wait();
@@ -53,12 +51,12 @@ const storeMsgContract = {
     },
 
     // set relay to next relay data
-    async setData2NextRelay(senderAddress, receiverAddress, data) {
+    async setData2NextRelay(receiverAddress, encryptedData) {
         let gasEstimate = await this.singerContract.estimateGas.Data2NextRelay(
             receiverAddress,
-            data
+            encryptedData
         );
-        let tx = await this.singerContract.Data2NextRelay(receiverAddress, data, {
+        let tx = await this.singerContract.Data2NextRelay(receiverAddress, encryptedData, {
             gasLimit: (gasEstimate.toNumber() * 1.1).toFixed(0),
         });
         await tx.wait();
@@ -70,21 +68,34 @@ const storeMsgContract = {
         console.log(result);
         return result;
     },
+
     // 监听applicant to relay data
     // 设置监听频率: 依赖于eth节点
-    async listenApp2RelayData(myAddress) {
-        return new Promise((resolve, reject) => {
-            let resFilter = this.contract.filters.App2RelayDataEvent(null, myAddress);
-            // 监听部分
-            this.contract
-                .on(resFilter, async (from, to, data) => {
-                    resolve({ from, to, data });
-                })
-                .once('error', (error) => {
-                    console.log(error);
-                    reject(error);
-                });
-        });
+    listenApp2RelayData(myAnonymousAddress, key, callback) {
+        let resFilter = this.contract.filters.App2RelayDataEvent(null, myAnonymousAddress);
+        this.contract
+            .on(resFilter, async (from, to, data) => {
+                let decryptData = await callback(key, data);
+                console.log('data from appliacnt: ', decryptData);
+            })
+            .once('error', (error) => {
+                console.log(error);
+                reject(error);
+            });
+    },
+
+    // 监听pre relay to next relay data
+    listenPre2NextData(myAnonymousAddress, key, callback) {
+        let resFilter = this.contract.filters.Data2NextRelayEvent(null, myAnonymousAddress);
+        this.contract
+            .on(resFilter, async (from, to, data) => {
+                let decryptData = await callback(key, data);
+                console.log('data from pre relay: ', decryptData);
+            })
+            .once('error', (error) => {
+                console.log(error);
+                reject(error);
+            });
     },
 
     // 设置请求者hash

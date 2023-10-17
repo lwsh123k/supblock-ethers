@@ -55,7 +55,7 @@ io.on('connection', function (socket) {
         if (eventName === 'join') return;
         const toSocket = onlineUsers[data.to];
         if (toSocket) {
-            console.log(data.from, '   ', data.to, data);
+            console.log('from: ', data.from, '\nto: ', data.to, '\ndata:', data);
             toSocket.emit(eventName, data);
         }
     });
