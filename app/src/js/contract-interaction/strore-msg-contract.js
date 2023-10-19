@@ -52,11 +52,11 @@ const storeMsgContract = {
 
     // set relay to next relay data
     async setData2NextRelay(receiverAddress, encryptedData) {
-        let gasEstimate = await this.singerContract.estimateGas.Data2NextRelay(
+        let gasEstimate = await this.singerContract.estimateGas.setData2NextRelay(
             receiverAddress,
             encryptedData
         );
-        let tx = await this.singerContract.Data2NextRelay(receiverAddress, encryptedData, {
+        let tx = await this.singerContract.setData2NextRelay(receiverAddress, encryptedData, {
             gasLimit: (gasEstimate.toNumber() * 1.1).toFixed(0),
         });
         await tx.wait();

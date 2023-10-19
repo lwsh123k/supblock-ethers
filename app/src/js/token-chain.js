@@ -130,7 +130,6 @@ const tokenChain = {
         this.relayIndex++;
         let data = this.getApp2RelayData(this.relayIndex);
         let accountInfo = await networkRequest.getAccountInfo(fairIntegerNumber);
-        console.log(accountInfo);
         let encryptedData = await PublicKeyEncrypt.getEncryptData(accountInfo.publicKey, data);
         let receiverAddress = accountInfo.address;
         await storeMsg.setApp2RelayData(receiverAddress, encryptedData);

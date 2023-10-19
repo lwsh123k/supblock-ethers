@@ -15,7 +15,7 @@ async function insertDocs() {
 
         let docs = [];
         // 文件读取, 准备数据
-        for (let i = 1; i <= 100; i++) {
+        for (let i = 0; i < 100; i++) {
             let data = await fs.readFile(
                 path.join('C:\\Users\\lsj\\Desktop\\account', `user account ${i}.txt`),
                 'utf8'
@@ -24,7 +24,7 @@ async function insertDocs() {
             let realNameKey = data.split('\n')[0].trim();
             let publicKey = EthCrypto.publicKeyByPrivateKey(realNameKey);
             let address = EthCrypto.publicKey.toAddress(publicKey);
-            docs.push({ i: i - 1, publicKey, address });
+            docs.push({ i, publicKey, address });
         }
         console.log(docs.length);
         // 插入数据到数据库
