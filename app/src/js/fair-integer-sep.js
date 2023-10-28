@@ -86,7 +86,7 @@ const FairInteger = {
         let result = await sigContract.getReqExecuteTime(addressB);
         let tA = result[0].toNumber();
         let tB = result[1].toNumber();
-        let dataIndex = result[2].toNumber();
+        let dataIndex = result[2].toNumber(); // 双方上传完毕之后, 需要查看所选的随机数
 
         // 挑选随机数ni, 0 <= ni < 100. Math.random()方法返回一个0（包括）到1（不包括）之间的随机浮点数
         this.ni = Math.floor(Math.random() * 100);
@@ -164,14 +164,8 @@ const FairInteger = {
                         this.addMessage(`请求者: 上传错误ni ri`);
                         this.updateOneCell(table, 1, 5, 'ni ri 错误');
                     }
+                    // 怎么在await中reject
                 }
-                let showNumResult = await sigContract.showNum(addressA, addressB, dataIndex);
-                let fairIntegerNumber =
-                    (showNumResult[0].toNumber() + showNumResult[1].toNumber()) % 100;
-                console.log(showNumResult[0].toNumber(), showNumResult[1].toNumber());
-                console.log('fairIntegerNumber: ', fairIntegerNumber);
-                fairIntegerNumber = 2;
-                return fairIntegerNumber;
             }, null);
         // 通过socket通知对方上传
         this.socket.emit('req upload hash success', { from: addressA, to: addressB });
@@ -180,7 +174,15 @@ const FairInteger = {
         this.clearMessage();
         this.addMessage(`ni: ${this.ni}, tA: ${tA}, tB: ${tB}, ri: ${this.ri}, hash: ${this.hash}`);
         this.addMessage(`请求者${addressA}:hash已上传`);
-        return listenResResult;
+        return Promise.all([listenResResult, this.reqUploadNum()]).then(async () => {
+            // 查看选择的随机数
+            let showNumResult = await sigContract.showNum(addressA, addressB, dataIndex);
+            let fairIntegerNumber =
+                (showNumResult[0].toNumber() + showNumResult[1].toNumber()) % 100;
+            console.log('fairIntegerNumber: ', fairIntegerNumber);
+            fairIntegerNumber = 2;
+            return fairIntegerNumber;
+        });
     },
 
     // 响应者上传hash
@@ -237,11 +239,7 @@ const FairInteger = {
                         this.updateOneCell(table, 2, 5, 'ni ri ✘');
                     }
                 }
-                let showNumResult = await sigContract.showNum(addressA, addressB, dataIndex);
-                let fairIntegerNumber =
-                    (showNumResult[0].toNumber() + showNumResult[1].toNumber()) % 100;
-                fairIntegerNumber = 2;
-                return fairIntegerNumber;
+                return dataIndex;
             }, null);
 
         // 通过socket通知对方上传成功
@@ -264,7 +262,14 @@ const FairInteger = {
 
         this.addMessage(`ni: ${this.ni}, tA: ${tA}, tB: ${tB}, ri: ${this.ri}, hash: ${this.hash}`);
         this.addMessage(`响应者hash已上传`);
-        return listenReqResult;
+        return Promise.all([listenReqResult, this.resUploadNum()]).then(async () => {
+            let showNumResult = await sigContract.showNum(addressA, addressB, dataIndex);
+            let fairIntegerNumber =
+                (showNumResult[0].toNumber() + showNumResult[1].toNumber()) % 100;
+            console.log('fairIntegerNumber: ', fairIntegerNumber);
+            fairIntegerNumber = 2;
+            return fairIntegerNumber;
+        });
     },
 
     // 请求者上传ni ri
@@ -282,6 +287,7 @@ const FairInteger = {
             this.updateOneCell(table, 1, 5, 'ni ri已上传');
             // this.socket.emit('req reveal random number success', { from: addressA, to: addressB });
         } else this.addMessage(res);
+        return res;
     },
 
     // 响应者上传ni ri
@@ -298,6 +304,7 @@ const FairInteger = {
             this.updateOneCell(table, 2, 5, 'ni ri已上传');
             // this.socket.emit('res reveal random number success', { from: addressB, to: addressA });
         } else this.addMessage(res);
+        return res;
     },
 
     // 显示选择的随机数

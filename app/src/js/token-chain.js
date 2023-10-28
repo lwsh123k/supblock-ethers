@@ -121,31 +121,44 @@ const tokenChain = {
     // 请求者: 公平随机数生成, 向relay发送数据
     // 使用匿名地址连接钱包, 如果是applicant, 每次进行fair integer generation时需要更换为selected temp account
     async reqUploadHash(addressB) {
-        this.setWallet(this.selectedTempAccount[this.relayIndex].key);
-        let fairIntegerNumber = await FairInteger.randomHashReq(
-            this.selectedTempAccount[this.relayIndex].address,
-            addressB
-        );
-        // 选完随机数后, relay index++, 表示当前relay已经结束
-        this.relayIndex++;
-        let data = this.getApp2RelayData(this.relayIndex);
-        let accountInfo = await networkRequest.getAccountInfo(fairIntegerNumber);
-        let encryptedData = await PublicKeyEncrypt.getEncryptData(accountInfo.publicKey, data);
-        let receiverAddress = accountInfo.address;
-        await storeMsg.setApp2RelayData(receiverAddress, encryptedData);
+        try {
+            this.setWallet(this.selectedTempAccount[this.relayIndex].key);
+            let fairIntegerNumber = await FairInteger.randomHashReq(
+                this.selectedTempAccount[this.relayIndex].address,
+                addressB
+            );
+            // 选完随机数后, relay index++, 表示当前relay已经结束
+            this.relayIndex++;
+            // 获取加密数据
+            let data = this.getApp2RelayData(this.relayIndex);
+            let accountInfo = await networkRequest.getAccountInfo(fairIntegerNumber);
+            let encryptedData = await PublicKeyEncrypt.getEncryptData(accountInfo.publicKey, data);
+            let receiverAddress = accountInfo.address;
+            await storeMsg.setApp2RelayData(receiverAddress, encryptedData);
+        } catch (rejectReason) {
+            console.log(rejectReason);
+        }
     },
 
     // 响应者: 公平随机数生成, 向relay发送数据
     resUploadHash(addressA) {
         this.setWallet(this.accounts[1].key);
         let listenReqResult = FairInteger.randomHashRes(addressA, this.accounts[1].address);
-        listenReqResult.then(async (fairIntegerNumber) => {
-            let data = this.getPre2NextData();
-            let accountInfo = await networkRequest.getAccountInfo(fairIntegerNumber);
-            let encryptedData = await PublicKeyEncrypt.getEncryptData(accountInfo.publicKey, data);
-            let receiverAddress = accountInfo.address;
-            await storeMsg.setData2NextRelay(receiverAddress, encryptedData);
-        }, null);
+        listenReqResult
+            .then(async (fairIntegerNumber) => {
+                // 获取加密数据
+                let data = this.getPre2NextData();
+                let accountInfo = await networkRequest.getAccountInfo(fairIntegerNumber);
+                let encryptedData = await PublicKeyEncrypt.getEncryptData(
+                    accountInfo.publicKey,
+                    data
+                );
+                let receiverAddress = accountInfo.address;
+                await storeMsg.setData2NextRelay(receiverAddress, encryptedData);
+            }, null)
+            .catch((rejectReason) => {
+                console.log(rejectReason);
+            });
     },
 
     // 请求者上传ni ri

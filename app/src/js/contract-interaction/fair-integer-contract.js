@@ -8,7 +8,8 @@ const sigContract = {
     singerContract: null,
     contract: null,
     contractAddress: contractAddress.FairIntegerContract,
-    ListenResTimeIds: [],
+    reqTimeOutId: [], // 存储定时器id, 方便清除定时
+    resTimeOutId: [],
 
     abi: [
         'event ResHashUpload(address indexed from, address indexed to, bytes32 infoHashB)',
@@ -197,7 +198,7 @@ const sigContract = {
             //            如果没有监听到, 就让定时器取消监听;
             const timeout = 100000; // 30s + 60s +10s
             let timeoutId = setTimeout(async () => {
-                this.ListenResTimeIds.shift();
+                this.reqTimeOutId.shift();
                 if (listenResult === false) {
                     this.contract.removeAllListeners(); // 如果没有监听到(超时), 则移除事件监听器
                     let state = await this.getState(reqAddress, resAddress, reuploadIndex);
@@ -215,13 +216,13 @@ const sigContract = {
                     resolve([isReupload, listenResult, state]);
                 }
             }, timeout);
-            this.ListenResTimeIds.push(timeoutId);
+            this.reqTimeOutId.push(timeoutId);
 
             // 监听部分
             this.contract
                 .once(resFilter, async (from, to, state) => {
                     listenResult = true;
-                    clearTimeout(this.ListenResTimeIds.shift());
+                    clearTimeout(this.reqTimeOutId.shift());
                     if (state == 2 || state == 7) {
                         await this.singerContract.reuploadNum(
                             from,
@@ -244,6 +245,7 @@ const sigContract = {
 
     // 响应者使用：监听请求者ni ri上传事件(source区分是请求者(=0)还是响应者(=1))
     async listenReqNum(reqAddress, resAddress, reuploadIndex, newni, newri) {
+        this.clearAllListen();
         return new Promise((resolve, reject) => {
             let reqFilter = this.contract.filters.ReqInfoUpload(reqAddress, resAddress);
             let listenResult = false;
@@ -251,6 +253,7 @@ const sigContract = {
             // 设置监听的时间: 120s + 10s  或者 60s+10s
             const timeout = 70000;
             let timeoutId = setTimeout(async () => {
+                this.resTimeOutId.shift();
                 if (listenResult === false) {
                     this.contract.removeAllListeners();
                     let state = await this.getState(reqAddress, resAddress, reuploadIndex);
@@ -268,12 +271,12 @@ const sigContract = {
                     resolve([isReupload, listenResult, state]);
                 }
             }, timeout);
-
+            this.resTimeOutId.push(timeoutId);
             // 监听部分
             this.contract
                 .once(reqFilter, async (from, to, state) => {
                     listenResult = true;
-                    clearTimeout(timeoutId);
+                    clearTimeout(this.resTimeOutId.shift());
                     console.log('响应者监听到了, state: ', state);
                     if (state == 3 || state == 6) {
                         await this.singerContract.reuploadNum(
@@ -297,6 +300,8 @@ const sigContract = {
 
     // 请求者使用：监听响应者hash上传事件(source区分是请求者(=0)还是响应者(=1))
     async listenResHash(addressA, addressB) {
+        // 每次调用之前清空所有的监听和定时器
+        this.clearAllListen();
         return new Promise((resolve, reject) => {
             let filter = this.contract.filters.ResHashUpload(addressA, addressB);
             let listenResult = false;
@@ -306,7 +311,7 @@ const sigContract = {
                 if (listenResult === false) {
                     // 如果30s + 10s没有监听到对方上传hash, 需要移除对ni ri的监听, 移除ni ri超时监听
                     this.contract.removeAllListeners();
-                    clearTimeout(this.ListenResTimeIds.shift());
+                    clearTimeout(this.reqTimeOutId.shift());
                     resolve([listenResult]);
                 }
             }, timeout);
@@ -348,12 +353,25 @@ const sigContract = {
                 if (listenResult === false) {
                     this.contract.removeAllListeners('ResInfoUpload'); // 如果30s + 10s没有监听到对方上传hash, 需要移除对ni ri的监听
                     // 移除ni ri超时监听
-                    // console.log(this.ListenResTimeIds.length);
-                    clearTimeout(this.ListenResTimeIds.shift());
+                    // console.log(this.reqTimeOutId.length);
+                    clearTimeout(this.reqTimeOutId.shift());
                     resolve([isReupload, listenResult]);
                 }
             }, timeout);
         });
+    },
+
+    // 当开始新一轮的fair integer generation时, 清空所有监听
+    clearAllListen() {
+        this.contract.removeAllListeners();
+        this.reqTimeOutId.forEach((timeid) => {
+            clearTimeout(timeid);
+        });
+        this.resTimeOutId.forEach((timeid) => {
+            clearTimeout(timeid);
+        });
+        this.reqTimeOutId = [];
+        this.resTimeOutId = [];
     },
 };
 
