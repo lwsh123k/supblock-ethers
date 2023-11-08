@@ -36,7 +36,7 @@ const onlineUsers = {};
 io.on('connection', function (socket) {
     console.log('有用户连接: ' + socket.id);
 
-    // 加入socket需要通过认证
+    // 用户连接, 需要通过认证
     socket.on('join', function (data) {
         let address = data.address;
         let signedAuthString = data.signedAuthString;
@@ -50,9 +50,16 @@ io.on('connection', function (socket) {
         }
     });
 
+    // 插件连接到socket
+    // 考虑到plugin只是起到辅助作用, 不做认证加密处理
+    socket.on('pluginConnection', () => {
+        onlineUsers['plugin'] = socket;
+        console.log('plugin 已加入到socket user storage object');
+    });
+
     // 转发任意信息
     socket.onAny((eventName, data) => {
-        if (eventName === 'join') return;
+        if (['join', 'pluginConnection'].includes(eventName)) return;
         const toSocket = onlineUsers[data.to];
         if (toSocket) {
             console.log('from: ', data.from, '\nto: ', data.to, '\ndata:', data);

@@ -51,6 +51,30 @@ const tokenChain = {
             if (result) FairInteger.addMessage('chain initialization data is correct');
             else FairInteger.addMessage('chain initialization data is false');
         });
+
+        // 和reqUploadHash函数相辅相成, applicant给插件发消息打开新页面, 插件告知applicant新页面已经打开
+        socket.on('new tab opening finished to applicant', async (data1) => {
+            let fairIntegerNumber = data1.number;
+            // 选完随机数后, relay index++, 表示当前relay已经结束
+            this.relayIndex++;
+            // 获取加密数据
+            let data = this.getApp2RelayData(this.relayIndex);
+            let accountInfo = await networkRequest.getAccountInfo(fairIntegerNumber);
+            let encryptedData = await PublicKeyEncrypt.getEncryptData(accountInfo.publicKey, data);
+            let receiverAddress = accountInfo.address;
+            await storeMsg.setApp2RelayData(receiverAddress, encryptedData);
+        });
+
+        // 告知relay新页面已经打开
+        socket.on('new tab opening finished to pre relay', async (data1) => {
+            let fairIntegerNumber = data1.number;
+            // 获取加密数据
+            let data = this.getPre2NextData();
+            let accountInfo = await networkRequest.getAccountInfo(fairIntegerNumber);
+            let encryptedData = await PublicKeyEncrypt.getEncryptData(accountInfo.publicKey, data);
+            let receiverAddress = accountInfo.address;
+            await storeMsg.setData2NextRelay(receiverAddress, encryptedData);
+        });
     },
 
     // 对任意个数的参数取hash
@@ -118,7 +142,7 @@ const tokenChain = {
         }
     },
 
-    // 请求者: 公平随机数生成, 向relay发送数据
+    // 请求者: 上传hash -> 公平随机数生成 -> 向relay发送数据
     // 使用匿名地址连接钱包, 如果是applicant, 每次进行fair integer generation时需要更换为selected temp account
     async reqUploadHash(addressB) {
         try {
@@ -127,14 +151,14 @@ const tokenChain = {
                 this.selectedTempAccount[this.relayIndex].address,
                 addressB
             );
-            // 选完随机数后, relay index++, 表示当前relay已经结束
-            this.relayIndex++;
-            // 获取加密数据
-            let data = this.getApp2RelayData(this.relayIndex);
-            let accountInfo = await networkRequest.getAccountInfo(fairIntegerNumber);
-            let encryptedData = await PublicKeyEncrypt.getEncryptData(accountInfo.publicKey, data);
-            let receiverAddress = accountInfo.address;
-            await storeMsg.setApp2RelayData(receiverAddress, encryptedData);
+            // 请求打开新页面, partner是指: 响应者, 此时请求者和响应者都需要给next relay发送消息.
+            this.socket.emit('open a new tab', {
+                from: this.selectedTempAccount[this.relayIndex].address,
+                to: 'plugin',
+                partner: addressB,
+                number: fairIntegerNumber,
+                url: 'http://localhost:8000/fairIntegerSep.html',
+            });
         } catch (rejectReason) {
             console.log(rejectReason);
         }
@@ -146,27 +170,19 @@ const tokenChain = {
         let listenReqResult = FairInteger.randomHashRes(addressA, this.accounts[1].address);
         listenReqResult
             .then(async (fairIntegerNumber) => {
-                // 获取加密数据
-                let data = this.getPre2NextData();
-                let accountInfo = await networkRequest.getAccountInfo(fairIntegerNumber);
-                let encryptedData = await PublicKeyEncrypt.getEncryptData(
-                    accountInfo.publicKey,
-                    data
-                );
-                let receiverAddress = accountInfo.address;
-                await storeMsg.setData2NextRelay(receiverAddress, encryptedData);
+                // do nothing
             }, null)
             .catch((rejectReason) => {
                 console.log(rejectReason);
             });
     },
 
-    // 请求者上传ni ri
+    // not used. 请求者上传ni ri
     reqUploadNum(addressB, ni, ri) {
         FairInteger.reqUploadNum(addressB, ni, ri);
     },
 
-    // 响应者上传ni ri
+    // not used. 响应者上传ni ri
     resUploadNum(addressA, ni, ri) {
         FairInteger.resUploadNum(addressA, ni, ri);
     },
