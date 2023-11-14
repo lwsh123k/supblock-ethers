@@ -174,15 +174,20 @@ const FairInteger = {
         this.clearMessage();
         this.addMessage(`ni: ${this.ni}, tA: ${tA}, tB: ${tB}, ri: ${this.ri}, hash: ${this.hash}`);
         this.addMessage(`请求者${addressA}:hash已上传`);
-        return Promise.all([listenResResult, this.reqUploadNum()]).then(async () => {
-            // 查看选择的随机数
-            let showNumResult = await sigContract.showNum(addressA, addressB, dataIndex);
-            let fairIntegerNumber =
-                (showNumResult[0].toNumber() + showNumResult[1].toNumber()) % 100;
-            console.log('fairIntegerNumber: ', fairIntegerNumber);
-            fairIntegerNumber = 2;
-            return fairIntegerNumber;
-        });
+        return Promise.all([listenResResult, this.reqUploadNumPromise(addressB)]).then(
+            async () => {
+                // 查看选择的随机数
+                let showNumResult = await sigContract.showNum(addressA, addressB, dataIndex);
+                let fairIntegerNumber =
+                    (showNumResult[0].toNumber() + showNumResult[1].toNumber()) % 100;
+                console.log('fairIntegerNumber: ', fairIntegerNumber);
+                // fairIntegerNumber = 2;
+                return fairIntegerNumber;
+            },
+            (reason) => {
+                console.log(reason);
+            }
+        );
     },
 
     // 响应者上传hash
@@ -262,50 +267,117 @@ const FairInteger = {
 
         this.addMessage(`ni: ${this.ni}, tA: ${tA}, tB: ${tB}, ri: ${this.ri}, hash: ${this.hash}`);
         this.addMessage(`响应者hash已上传`);
-        return Promise.all([listenReqResult, this.resUploadNum()]).then(async () => {
+        return Promise.all([listenReqResult, this.resUploadNumPromise(addressA)]).then(async () => {
             let showNumResult = await sigContract.showNum(addressA, addressB, dataIndex);
             let fairIntegerNumber =
                 (showNumResult[0].toNumber() + showNumResult[1].toNumber()) % 100;
             console.log('fairIntegerNumber: ', fairIntegerNumber);
-            fairIntegerNumber = 2;
+            // fairIntegerNumber = 2;
             return fairIntegerNumber;
         });
     },
 
-    // 请求者上传ni ri
-    // 此处ni ri作为参数传入, 是为了方便模拟错误ni ri
-    async reqUploadNum(addressB, ni, ri) {
-        this.hasShow = false;
-        let res = await sigContract.setReqInfo(addressB, ni, ri);
-        let table = document.getElementById('numTable');
-        if (typeof res === 'boolean' && res === true) {
-            // 避免socket和ethers.js监听发生先后顺序冲突
-            if (!this.hasShow) {
-                this.addMessage(`请求者: ni和ri已上传`);
-                this.hasShow = true;
-            }
-            this.updateOneCell(table, 1, 5, 'ni ri已上传');
-            // this.socket.emit('req reveal random number success', { from: addressA, to: addressB });
-        } else this.addMessage(res);
-        return res;
-    },
+    // 请求者上传ni ri. 当正常上传时, promise为ture; 否则为错误信息
+    // 此处的IIFE中的this: 应该是指向window, 但猜测webpack加上了use strict, 导致为undefined
+    reqUploadNumPromise: (function reqUploadNum() {
+        // 闭包, 记录上一次的timeid和callback, 便于清除上次的settimeout和回调
+        let timeid;
+        let clickCallBack;
+        return function (addressB) {
+            return new Promise((resolve, reject) => {
+                const button = document.getElementById('reqNumBtn');
+                // 每重新运行一次就将上次的清除
+                clearTimeout(timeid);
+                button.removeEventListener('click', clickCallBack);
 
-    // 响应者上传ni ri
-    async resUploadNum(addressA, ni, ri) {
-        this.hasShow = false;
-        let res = await sigContract.setResInfo(addressA, ni, ri);
-        let table = document.getElementById('numTable');
-        if (typeof res === 'boolean' && res === true) {
-            if (!this.hasShow) {
-                this.addMessage(`响应者: ni和ri已上传`);
-                this.hasShow = true;
-            }
+                // 定义点击上传随机数后的回调事件: 清除定时, 上传随机数
+                clickCallBack = async () => {
+                    clearTimeout(timeid);
+                    try {
+                        this.hasShow = false;
+                        // 此处没有直接用已经生成好的ni ri, 是想模拟错误情况
+                        let ni = document.getElementById('ni').value;
+                        let ri = document.getElementById('ri').value;
+                        let res = await sigContract.setReqInfo(addressB, ni, ri);
+                        let table = document.getElementById('numTable');
+                        if (typeof res === 'boolean' && res === true) {
+                            // 避免socket和ethers.js监听发生先后顺序冲突
+                            if (!this.hasShow) {
+                                this.addMessage(`请求者: ni和ri已上传`);
+                                this.hasShow = true;
+                            }
+                            this.updateOneCell(table, 1, 5, 'ni ri已上传');
+                            resolve(res);
+                        } else {
+                            console.log(res);
+                            reject(res);
+                        }
+                    } catch (error) {
+                        console.log(error);
+                        reject(new Error('error when click'));
+                    }
+                };
 
-            this.updateOneCell(table, 2, 5, 'ni ri已上传');
-            // this.socket.emit('res reveal random number success', { from: addressB, to: addressA });
-        } else this.addMessage(res);
-        return res;
-    },
+                // 添加本次的回调和定时(30s + 60s +10s)
+                button.addEventListener('click', clickCallBack);
+                const timeout = 100000;
+                timeid = setTimeout(() => {
+                    reject(new Error('Button not clicked within the timeout'));
+                }, timeout);
+            });
+        };
+    })(),
+    // 对象字面量内部, this 不指向对象本身, 下面的不成立, 使用iife
+    // reqUploadNumPromise: this.reqUploadNum(),
+
+    // 响应者上传随机数promise
+    resUploadNumPromise: (function resUploadNum() {
+        // 闭包, 记录上一次的timeid和callback, 便于清除上次的settimeout和回调
+        let timeid;
+        let clickCallBack;
+        return function (addressA) {
+            return new Promise((resolve, reject) => {
+                const button = document.getElementById('resNumBtn');
+                // 每重新运行一次就将上次的清除
+                clearTimeout(timeid);
+                button.removeEventListener('click', clickCallBack);
+
+                // 定义点击上传随机数后的回调事件: 清除定时, 上传随机数
+                clickCallBack = async () => {
+                    clearTimeout(timeid);
+                    try {
+                        this.hasShow = false;
+                        // 此处没有直接用已经生成好的ni ri, 是想模拟错误情况
+                        let ni = document.getElementById('ni').value;
+                        let ri = document.getElementById('ri').value;
+                        let res = await sigContract.setResInfo(addressA, ni, ri);
+                        let table = document.getElementById('numTable');
+                        if (typeof res === 'boolean' && res === true) {
+                            if (!this.hasShow) {
+                                this.addMessage(`响应者: ni和ri已上传`);
+                                this.hasShow = true;
+                            }
+                            this.updateOneCell(table, 2, 5, 'ni ri已上传');
+                            resolve(res);
+                        } else {
+                            this.addMessage(res);
+                            reject(res);
+                        }
+                    } catch (error) {
+                        console.log(error);
+                        reject(new Error('error when click'));
+                    }
+                };
+
+                // 添加本次的回调和定时(30s + 60s +10s)
+                button.addEventListener('click', clickCallBack);
+                const timeout = 100000;
+                timeid = setTimeout(() => {
+                    reject(new Error('Button not clicked within the timeout'));
+                }, timeout);
+            });
+        };
+    })(),
 
     // 显示选择的随机数
     async showRandom(sender, receiver, index) {

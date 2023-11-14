@@ -119,20 +119,20 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     // 请求者上传ni和ri
-    document.querySelector('#reqNumBtn').addEventListener('click', () => {
-        let addressB = document.getElementById('receiver').value;
-        let ni = document.getElementById('ni').value;
-        let ri = document.getElementById('ri').value;
-        tokenChain.reqUploadNum(addressB, ni, ri);
-    });
+    // document.querySelector('#reqNumBtn').addEventListener('click', () => {
+    //     let addressB = document.getElementById('receiver').value;
+    //     let ni = document.getElementById('ni').value;
+    //     let ri = document.getElementById('ri').value;
+    //     tokenChain.reqUploadNum(addressB, ni, ri);
+    // });
 
     // 响应者上传ni和ri
-    document.querySelector('#resNumBtn').addEventListener('click', () => {
-        let addressA = document.getElementById('receiver').value;
-        let ni = document.getElementById('ni').value;
-        let ri = document.getElementById('ri').value;
-        tokenChain.resUploadNum(addressA, ni, ri);
-    });
+    // document.querySelector('#resNumBtn').addEventListener('click', () => {
+    //     let addressA = document.getElementById('receiver').value;
+    //     let ni = document.getElementById('ni').value;
+    //     let ri = document.getElementById('ri').value;
+    //     tokenChain.resUploadNum(addressA, ni, ri);
+    // });
 
     // 显示选择的随机数
     document.querySelector('#showRandomBtn').addEventListener('click', () => {

@@ -41,15 +41,11 @@ const sigContract = {
 
     // 设置请求者hash
     async setReqHash(receiver, mHash) {
-        console.time('gas estimate time');
         let gasEstimate = await this.singerContract.estimateGas.setReqHash(receiver, mHash);
-        console.timeEnd('gas estimate time');
-        console.time('setReqHash time');
         let tx = await this.singerContract.setReqHash(receiver, mHash, {
             gasLimit: (gasEstimate.toNumber() * 1.1).toFixed(0),
         });
         await tx.wait();
-        console.timeEnd('setReqHash time');
     },
 
     // 设置响应者hash
@@ -67,10 +63,13 @@ const sigContract = {
         try {
             // 静态模拟调用获取返回值
             let gasEstimate = await this.singerContract.estimateGas.setReqInfo(receiver, ni, ri);
+            // static call time: 19.045166015625 ms
+            // console.time('static call time');
             // let result = await this.singerContract.callStatic.setReqInfo(receiver, ni, ri, {
             //     gasLimit: (gasEstimate.toNumber() * 1.1).toFixed(0),
             // });
-            // console.log(result);
+            // console.timeEnd('static call time');
+
             // 只有模拟的合约正常执行, 才会进行真正的执行交易
             let tx = await this.singerContract.setReqInfo(receiver, ni, ri, {
                 gasLimit: (gasEstimate.toNumber() * 1.1).toFixed(0),
