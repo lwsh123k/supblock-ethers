@@ -33,6 +33,7 @@ contract FairInteger {
 	event ResHashUpload(address indexed from, address indexed to, bytes32 infoHashB);
 	event ReqInfoUpload(address indexed from, address indexed to, uint8 state);
 	event ResInfoUpload(address indexed from, address indexed to, uint8 state);
+	event UpLoadNum(address indexed from, address indexed to, uint8 state);
 	//event ReuploadRandomNum(address indexed from, address indexed to, uint8 source, uint8 state);
 
 	// 记录成功执行的次数
@@ -107,7 +108,7 @@ contract FairInteger {
 		personalInteger[msg.sender][receiver][len - 1].riA = ri;
 		// 上传时就判断正确性
 		bytes32 hashA = keccak256(abi.encode(ni, integerInfo.tA, integerInfo.tB, ri));
-		uint state = personalInteger[msg.sender][receiver][len - 1].state;
+		uint8 state = personalInteger[msg.sender][receiver][len - 1].state;
 		if (hashA == integerInfo.infoHashA) {
 			executeTime[msg.sender]++;
 			if (state == 0) personalInteger[msg.sender][receiver][len - 1].state = 4;
@@ -118,6 +119,10 @@ contract FairInteger {
 			else if (state == 5) personalInteger[msg.sender][receiver][len - 1].state = 3;
 			else if (state == 7) personalInteger[msg.sender][receiver][len - 1].state = 10;
 		}
+
+		// 记录请求者和响应者的事件不需要分开记录, 只需要上传之后就emit事件
+		emit UpLoadNum(msg.sender, receiver, personalInteger[msg.sender][receiver][len - 1].state);
+
 		// 记录事件
 		emit ReqInfoUpload(
 			msg.sender,
@@ -150,7 +155,7 @@ contract FairInteger {
 
 		// 上传时就判断正确性
 		bytes32 hashB = keccak256(abi.encode(ni, integerInfo.tA, integerInfo.tB, ri));
-		uint state = personalInteger[sender][msg.sender][len - 1].state;
+		uint8 state = personalInteger[sender][msg.sender][len - 1].state;
 		if (hashB == integerInfo.infoHashB) {
 			executeTime[msg.sender]++;
 			if (state == 0) personalInteger[sender][msg.sender][len - 1].state = 5;
@@ -161,6 +166,7 @@ contract FairInteger {
 			else if (state == 4) personalInteger[sender][msg.sender][len - 1].state = 2;
 			else if (state == 6) personalInteger[sender][msg.sender][len - 1].state = 10;
 		}
+		emit UpLoadNum(sender, msg.sender, personalInteger[sender][msg.sender][len - 1].state);
 		emit ResInfoUpload(sender, msg.sender, personalInteger[sender][msg.sender][len - 1].state);
 	}
 
@@ -189,7 +195,7 @@ contract FairInteger {
 
 	// 验证正确性(index从0开始): 有一方上传错误
 	// 验证时间: 有一方没有上传  或者  有一方没有按规定时间上传
-	//
+	// not used.
 	function verifyInfo(
 		address sender,
 		address receiver,
@@ -245,6 +251,16 @@ contract FairInteger {
 		uint256 len = personalInteger[sender][receiver].length;
 		require(index < len, "error index");
 		IntegerInfo memory integerInfo = personalInteger[sender][receiver][index];
+		return (integerInfo.niA, integerInfo.niB, integerInfo.state);
+	}
+
+	// 获取最新的num
+	function showLatestNum(
+		address sender,
+		address receiver
+	) public view returns (uint256, uint256, uint8) {
+		uint256 lastIndex = personalInteger[sender][receiver].length - 1;
+		IntegerInfo memory integerInfo = personalInteger[sender][receiver][lastIndex];
 		return (integerInfo.niA, integerInfo.niB, integerInfo.state);
 	}
 

@@ -151,14 +151,7 @@ const tokenChain = {
                 this.selectedTempAccount[this.relayIndex].address,
                 addressB
             );
-            // 请求打开新页面, partner是指: 响应者, 此时请求者和响应者都需要给next relay发送消息.
-            this.socket.emit('open a new tab', {
-                from: this.selectedTempAccount[this.relayIndex].address,
-                to: 'plugin',
-                partner: addressB,
-                number: fairIntegerNumber,
-                url: 'http://localhost:8000/fairIntegerSep.html',
-            });
+            // do nothing.
         } catch (rejectReason) {
             console.log(rejectReason);
         }

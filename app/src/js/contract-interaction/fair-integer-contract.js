@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import contractAddress from './contractAddress.json';
+import contractAddress from './contract-address.json';
 
 const sigContract = {
     // 创建 Web3Provider 对象
@@ -45,6 +45,8 @@ const sigContract = {
         let tx = await this.singerContract.setReqHash(receiver, mHash, {
             gasLimit: (gasEstimate.toNumber() * 1.1).toFixed(0),
         });
+        //transaction.wait( [ confirms = 1 ] ) ⇒ Promise< TransactionReceipt >
+        // confirms属性表示你愿意等待的挖出区块数量, 一旦满足这个值将返回一个待解析的TransactionReceipt. 如果confirms为0，并且交易还没有被挖出，则返回null。
         await tx.wait();
     },
 
