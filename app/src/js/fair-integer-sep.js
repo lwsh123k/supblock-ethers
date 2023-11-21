@@ -96,13 +96,10 @@ const FairInteger = {
         document.getElementById('ri').value = this.ri.toString();
         // 取hash, 上传
         this.hash = sigContract.getHash(this.ni, tA, tB, this.ri);
-        await sigContract.setReqHash(addressB, this.hash);
-        // 监听nb rb
-        let newni = Math.floor(Math.random() * 100);
-        let newri = sigContract.generateRandomBytes(32);
+
+        // 先监听, 再上传, 避免区块确认时间
         // 初始化表格
         let table = document.getElementById('numTable');
-        table.style.display = 'table';
         this.clearTable(table);
         this.addOneLine(
             table,
@@ -124,6 +121,12 @@ const FairInteger = {
                 this.addOneLine(table, '响应者', '30s内未上传hash');
             }
         }, null);
+        // 上传hash
+        await sigContract.setReqHash(addressB, this.hash);
+        // 监听nb rb
+        let newni = Math.floor(Math.random() * 100);
+        let newri = sigContract.generateRandomBytes(32);
+
         let listenResResult = sigContract
             .listenResNum(addressA, addressB, dataIndex, newni, newri)
             .then(async (result) => {
@@ -172,6 +175,7 @@ const FairInteger = {
         this.addOneLine(table, '请求者', this.ni, tA, tB, this.ri, 'hash已上传');
 
         this.clearMessage();
+        table.style.display = 'table';
         this.addMessage(`ni: ${this.ni}, tA: ${tA}, tB: ${tB}, ri: ${this.ri}, hash: ${this.hash}`);
         this.addMessage(`请求者${addressA}:hash已上传`);
         return Promise.all([listenResResult, this.reqUploadNumPromise(addressB)]).then(

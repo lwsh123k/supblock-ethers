@@ -6,3 +6,6 @@ let deblind = BigInteger.fromHex(
 );
 
 console.log(s.subtract(deblind).toHex());
+
+module.exports = { a: 1 };
+console.log(module.exports, exports, module.exports === exports);

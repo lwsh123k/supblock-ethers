@@ -5,6 +5,7 @@ const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const { ethers } = require('ethers');
 const PublicKeyRouter = require('./router/publickey');
+const FairIntegerContract = require('./contract-interaction/listen-blockchain');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -67,6 +68,21 @@ io.on('connection', function (socket) {
         }
     });
 });
+
+// 监听随机数上传, 并将信息告诉extension, extension打开新页面, 告诉applicant和relay可以发送信息了
+let sendPluginMessage = (addressA, addressB, fairIntegerNumber) => {
+    let pluginSocket = onlineUsers['plugin'];
+    // 请求打开新页面, partner是指: 响应者, 此时请求者和响应者都需要给next relay发送消息.
+    pluginSocket.emit('open a new tab', {
+        from: addressA,
+        to: 'plugin',
+        partner: addressB,
+        number: fairIntegerNumber,
+        url: 'http://localhost:8000/fairIntegerSep.html',
+    });
+};
+let fairIntegerContract = new FairIntegerContract();
+fairIntegerContract.listenNumUpload(sendPluginMessage);
 
 // 启动服务器
 server.listen(3000, function () {

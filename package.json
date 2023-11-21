@@ -1,23 +1,29 @@
 {
-  "name": "supblock-ethers",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "compile": "npx hardhat compile"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "@nomicfoundation/hardhat-chai-matchers": "^1.0.6",
-    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
-    "hardhat": "^2.14.0",
-    "prettier": "^2.8.8",
-    "prettier-plugin-solidity": "^1.1.3"
-  },
-  "dependencies": {
-    "@openzeppelin/contracts": "^4.8.3"
-  }
+    "name": "supblock-ethers",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "start": "concurrently -n \"hardhatStart, nodemon, webpack\" -c \"bgBlue.bold,bgMagenta.bold,bgGreen.bold\" \"npm run hardhatStart\" \"npm run backendDev\" \"npm run appDev\"",
+        "appDev": "cd app && npx webpack server",
+        "backendDev": "cd backend && npx nodemon ./index-socket-new.js",
+        "hardhatDev": "npx hardhat node",
+        "hardhatDeploy": "npx hardhat run --network localhost .\\scripts\\FairInteger.js && npx hardhat run --network localhost .\\scripts\\StoreMsg.js",
+        "hardhatStart": "npm run hardhatDev && npm run hardhatDeploy",
+        "compile": "npx hardhat compile"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "@nomicfoundation/hardhat-chai-matchers": "^1.0.6",
+        "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+        "concurrently": "^8.2.2",
+        "hardhat": "^2.14.0",
+        "prettier": "^2.8.8",
+        "prettier-plugin-solidity": "^1.1.3"
+    },
+    "dependencies": {
+        "@openzeppelin/contracts": "^4.8.3"
+    }
 }

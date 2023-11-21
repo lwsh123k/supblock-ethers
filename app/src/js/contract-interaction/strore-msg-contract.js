@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import contractAddress from './contractAddress.json';
+import contractAddress from './contract-address.json';
 
 const storeMsgContract = {
     provider: null,

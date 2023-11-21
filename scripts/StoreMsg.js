@@ -1,5 +1,5 @@
 const hre = require('hardhat');
-const writeAddress = require('./write-contract-address.js');
+const WriteAddress = require('./write-contract-address.js');
 
 async function main() {
     // hardhat自带ethers.js
@@ -8,8 +8,7 @@ async function main() {
     // 生成部署合约实例, 可以设置参数, 此时合约还没有部署
     const storeMsg = await StoreMsg.deploy();
     console.log('contract address: ', storeMsg.address);
-    writeAddress.writeContractAddress('StoreMsgContract', storeMsg.address);
-
+    WriteAddress.writeToFiles('StoreMsgContract', storeMsg.address);
     await storeMsg.deployed();
 }
 

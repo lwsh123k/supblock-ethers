@@ -14,14 +14,16 @@ router.post('/getAccountInfo', async (req, res) => {
     console.log(index);
     let info = null;
     try {
-        await client.connect();
+        // optional starting in v4.7
+        // await client.connect();
         const database = client.db('sup-block');
         const pkdocument = database.collection('publickey');
         let query = { i: index };
         let option = { projection: { _id: 0 } };
         info = await pkdocument.findOne(query, option);
     } finally {
-        await client.close();
+        // 不要每次连接都要关闭
+        // await client.close();
     }
     res.send(info);
 });
