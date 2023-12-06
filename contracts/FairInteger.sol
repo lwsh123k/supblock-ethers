@@ -323,5 +323,6 @@ contract FairInteger {
 			personalInteger[sender][receiver][index].riA = ri;
 			personalInteger[sender][receiver][index].state = 8;
 		}
+		emit UpLoadNum(sender, receiver, personalInteger[sender][receiver][index].state);
 	}
 }
