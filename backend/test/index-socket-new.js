@@ -6,11 +6,16 @@ const { v4: uuidv4 } = require('uuid');
 const { ethers } = require('ethers');
 const PublicKeyRouter = require('./router/publickey');
 const FairIntegerContract = require('./contract-interaction/listen-blockchain');
+
+// 创建express和socketio
+// express和socketio是运行在http服务器上的两套不同的东西, 用于处理请求和长连接.
+// Socket.IO 默认监听  /socket.io  路径
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: ['http://127.0.0.1:5500', 'http://localhost:8000', '*'],
+        // origin: ['http://127.0.0.1:5500', 'http://localhost:8000', 'http://localhost:8080'], // []和*不能同时使用
+        origin: '*',
     },
 });
 

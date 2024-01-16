@@ -56,7 +56,7 @@ module.exports = {
     // 开启dev server可以访问dist目录中的文件，默认为index.html
     devServer: {
         host: 'localhost', // 启动服务器域名
-        port: '8000', // 启动服务器端口号
+        port: '8001', // 启动服务器端口号
         open: true, // 是否自动打开浏览器
         compress: true,
     },
