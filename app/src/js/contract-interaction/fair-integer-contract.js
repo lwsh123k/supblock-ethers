@@ -82,8 +82,8 @@ const sigContract = {
             } else return false;
         } catch (error) {
             if (error.reason) {
-                console.log('error reason:', error.reason);
-                return 'error message:' + error.reason;
+                //console.log('error reason:', error.reason);
+                //return 'error message:' + error.reason;
             } else {
                 console.log('error:', error);
             }
@@ -110,8 +110,8 @@ const sigContract = {
             } else return false;
         } catch (error) {
             if (error.reason) {
-                console.log('error reason:', error.reason);
-                return 'error message:' + error.reason;
+                //console.log('error reason:', error.reason);
+                //return 'error message:' + error.reason;
             } else {
                 console.log('error:', error);
             }
