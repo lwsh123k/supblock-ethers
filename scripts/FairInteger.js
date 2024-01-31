@@ -17,7 +17,7 @@ async function main() {
 
     // 将合约地址写入前端和后端
     console.log(WriteAddress);
-    WriteAddress.writeToFiles('FairIntegerContract', fairInteger.address);
+    WriteAddress.writeToFiles('fairIntGenAddress', fairInteger.address);
 
     await fairInteger.deployed();
 }

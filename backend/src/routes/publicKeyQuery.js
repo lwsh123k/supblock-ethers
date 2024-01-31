@@ -8,8 +8,8 @@ const { MongoClient } = require('mongodb');
 const uri = 'mongodb://127.0.0.1:27017';
 const client = new MongoClient(uri);
 
-// get public key and address
-router.post('/getAccountInfo', async (req, res) => {
+// get public key and address (deprecated!!!)
+router.post('/getAccountInfo111', async (req, res) => {
     let index = req.body.index;
     console.log(index);
     let info = null;

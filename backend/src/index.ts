@@ -1,11 +1,11 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
-const { v4: uuidv4 } = require('uuid');
-const { ethers } = require('ethers');
-const routes = require('./routes'); // 引入路由
-const FairIntegerContract = require('./contract-interaction/listen-blockchain');
+import express from 'express';
+import http from 'http';
+import { Server, Socket } from 'socket.io';
+import cors from 'cors';
+import { v4 as uuidv4 } from 'uuid';
+import { ethers } from 'ethers';
+import routes from './routes'; // 引入路由
+import { FairIntegerContract } from './contract-interaction/listenEvent';
 
 // 创建express和socketio
 // express和socketio是运行在http服务器上的两套不同的东西, 用于处理请求和长连接.
@@ -24,7 +24,7 @@ app.use(cors());
 app.use(express.json());
 
 // 生成随机认证字符串, 将address和random string保存到mapping中
-const authString = new Map();
+const authString: Map<string, string> = new Map();
 app.post('/getAuthString', (req, res) => {
     if (!req.body.address) return;
     let address = req.body.address;
@@ -38,17 +38,18 @@ app.post('/getAuthString', (req, res) => {
 // 获取公钥
 app.use('/', routes);
 
-const onlineUsers = {};
+const onlineUsers: { [propName: string]: Socket } = {};
 io.on('connection', function (socket) {
     console.log('有用户连接: ' + socket.id);
 
     // 用户连接, 需要通过认证
     socket.on('join', function (data) {
-        let address = data.address;
+        let address: string = data.address;
         let signedAuthString = data.signedAuthString;
         if (address && authString.has(address) && signedAuthString) {
             let res =
-                address === ethers.utils.verifyMessage(authString.get(address), signedAuthString);
+                address ===
+                ethers.utils.verifyMessage(authString.get(address) as string, signedAuthString);
             if (res) {
                 // console.log('用户 ' + address + ' 加入');
                 onlineUsers[address] = socket;
@@ -75,7 +76,7 @@ io.on('connection', function (socket) {
 });
 
 // 监听随机数上传, 并将信息告诉extension, extension打开新页面, 告诉applicant和relay可以发送信息了
-let sendPluginMessage = (addressA, addressB, fairIntegerNumber) => {
+let sendPluginMessage = (addressA: string, addressB: string, fairIntegerNumber: number) => {
     let pluginSocket = onlineUsers['plugin'];
     // 请求打开新页面, partner是指: 响应者, 此时请求者和响应者都需要给next relay发送消息.
     pluginSocket.emit('open a new tab', {

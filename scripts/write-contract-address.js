@@ -7,7 +7,7 @@ const WriteAddress = {
     writeToFiles(contractName, contractAddress) {
         let fileName = 'contract-address.json';
         let frontendPath = path.join(__dirname, '..', 'app/src/js/contract-interaction', fileName);
-        let backendPath = path.join(__dirname, '..', 'backend/contract-interaction', fileName);
+        let backendPath = path.join(__dirname, '..', 'backend/src/contract-interaction', fileName);
         this.writeContractAddress(frontendPath, contractName, contractAddress);
         this.writeContractAddress(backendPath, contractName, contractAddress);
     },

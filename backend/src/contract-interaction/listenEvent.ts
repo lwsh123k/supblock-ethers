@@ -1,5 +1,5 @@
-const { ethers } = require('ethers');
-const contractAddress = require('./contract-address.json');
+import { ethers } from 'ethers';
+import contractAddress from './contract-address.json';
 
 class FairIntegerContract {
     abi = [
@@ -19,9 +19,11 @@ class FairIntegerContract {
         'function getState(address sender, address receiver, uint256 index) public view returns (uint8)',
         'function showLatestNum(address sender, address receiver) public view returns (uint256, uint256, uint8)',
     ];
-
+    FairIntegerAddress;
+    provider;
+    contract;
     constructor() {
-        this.FairIntegerAddress = contractAddress.FairIntegerContract;
+        this.FairIntegerAddress = contractAddress.fairIntGenAddress;
         // localhost被解析成IPv6, 所以此处要使用ip地址
         this.provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545');
         this.contract = new ethers.Contract(this.FairIntegerAddress, this.abi, this.provider);
@@ -36,10 +38,12 @@ class FairIntegerContract {
             });
     }
 
-    listenNumUpload(sendPluginMessage) {
+    listenNumUpload(
+        sendPluginMessage: (sender: string, receiver: string, fairIntegerNumber: number) => void
+    ) {
         let filter = this.contract.filters.UpLoadNum(null, null);
         console.log(filter);
-        this.contract.on(filter, async (sender, receiver, state) => {
+        this.contract.on(filter, async (sender, receiver, state, randomNum) => {
             // 只有relay和applicant都上传随机数时才会extension发送信息
             console.log(`sender: ${sender}, receiver: ${receiver}, state: ${state}`);
             if ([1, 8, 9].includes(state)) {
@@ -58,4 +62,4 @@ class FairIntegerContract {
     }
 }
 
-module.exports = FairIntegerContract;
+export { FairIntegerContract };
