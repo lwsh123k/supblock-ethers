@@ -39,3 +39,32 @@ model SupBlock {
     publicKey String
     address   String
 }
+
+model UploadHash {
+    id        Int      @id @default(autoincrement())
+    from      String
+    to        String
+    types     Int
+    infoHash  String
+    timestamp DateTime
+    blockNum  Int
+    gas       Int
+
+    @@index([from, to, types], name: "idx_upload_hash")
+}
+
+model UpLoadNum {
+    id        Int      @id @default(autoincrement())
+    from      String
+    to        String
+    types     Int
+    state     Int
+    ni        String
+    ri        String
+    t         String
+    timestamp DateTime
+    blockNum  Int
+    gas       Int
+
+    @@index([from, to, types], name: "idx_upload_num")
+}

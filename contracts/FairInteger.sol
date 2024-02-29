@@ -30,13 +30,21 @@ contract FairInteger {
 	}
 
 	// 定义事件, 方便监听检索, 请求者type=0, 响应者type=1
-	event uploadHash(
+	event UploadHash(
 		address indexed from,
 		address indexed to,
 		uint8 indexed types,
 		bytes32 infoHash
 	);
-	event UpLoadNum(address indexed from, address indexed to, uint8 indexed types, uint8 state);
+	event UpLoadNum(
+		address indexed from,
+		address indexed to,
+		uint8 indexed types,
+		uint8 state,
+		uint256 ni,
+		uint256 ri,
+		uint256 t
+	);
 	//event ReuploadRandomNum(address indexed from, address indexed to, uint8 source, uint8 state);
 
 	// 记录成功执行的次数
@@ -72,7 +80,7 @@ contract FairInteger {
 		integerInfo.tB = executeTime[receiver];
 		integerInfo.hashTa = block.timestamp;
 		personalInteger[msg.sender][receiver].push(integerInfo);
-		emit uploadHash(msg.sender, receiver, 0, mHash);
+		emit UploadHash(msg.sender, receiver, 0, mHash);
 	}
 
 	// 设置响应者infoHash
@@ -87,7 +95,7 @@ contract FairInteger {
 		require(integerInfo.hashTa + 30 seconds >= block.timestamp, "responder not upload in 30s");
 		personalInteger[sender][msg.sender][len - 1].infoHashB = mHash;
 		personalInteger[sender][msg.sender][len - 1].hashTb = block.timestamp;
-		emit uploadHash(sender, msg.sender, 1, mHash);
+		emit UploadHash(sender, msg.sender, 1, mHash);
 	}
 
 	// 请求者公开ni, ri.
@@ -129,7 +137,10 @@ contract FairInteger {
 			msg.sender,
 			receiver,
 			0,
-			personalInteger[msg.sender][receiver][len - 1].state
+			personalInteger[msg.sender][receiver][len - 1].state,
+			ni,
+			ri,
+			integerInfo.tA
 		);
 	}
 
@@ -168,7 +179,15 @@ contract FairInteger {
 			else if (state == 4) personalInteger[sender][msg.sender][len - 1].state = 2;
 			else if (state == 6) personalInteger[sender][msg.sender][len - 1].state = 10;
 		}
-		emit UpLoadNum(sender, msg.sender, 1, personalInteger[sender][msg.sender][len - 1].state);
+		emit UpLoadNum(
+			sender,
+			msg.sender,
+			1,
+			personalInteger[sender][msg.sender][len - 1].state,
+			ni,
+			ri,
+			integerInfo.tB
+		);
 	}
 
 	// 请求者:获取执行次数, 当前数组的下标(从0开始)
@@ -313,7 +332,15 @@ contract FairInteger {
 			personalInteger[sender][receiver][index].niB = ni;
 			personalInteger[sender][receiver][index].riB = ri;
 			personalInteger[sender][receiver][index].state = 9;
-			emit UpLoadNum(sender, receiver, 3, personalInteger[sender][receiver][index].state);
+			emit UpLoadNum(
+				sender,
+				receiver,
+				3,
+				personalInteger[sender][receiver][index].state,
+				ni,
+				ri,
+				index
+			);
 		}
 		// 响应者超时没有上传 或者 上传错误的, 请求者重传
 		if (
@@ -324,7 +351,15 @@ contract FairInteger {
 			personalInteger[sender][receiver][index].niA = ni;
 			personalInteger[sender][receiver][index].riA = ri;
 			personalInteger[sender][receiver][index].state = 8;
-			emit UpLoadNum(sender, receiver, 3, personalInteger[sender][receiver][index].state);
+			emit UpLoadNum(
+				sender,
+				receiver,
+				3,
+				personalInteger[sender][receiver][index].state,
+				ni,
+				ri,
+				index
+			);
 		}
 	}
 }

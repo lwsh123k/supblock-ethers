@@ -1,0 +1,15 @@
+export const fairIntegerAbi = [
+    'event UploadHash( address indexed from, address indexed to, uint8 indexed types, bytes32 infoHash );',
+    'event UpLoadNum( address indexed from, address indexed to, uint8 indexed types, uint8 state, uint256 ni, uint256 ri, uint256 t )',
+    'function setReqHash(address receiver, bytes32 mHash) public',
+    `function setResHash(address sender, bytes32 mHash) public`,
+    `function setReqInfo(address receiver, uint256 ni, uint256 ri) public`,
+    `function setResInfo(address sender, uint256 ni, uint256 ri) public`,
+    'function getReqExecuteTime(address receiver) public view returns (uint256, uint256, uint256)',
+    'function getResExecuteTime(address sender) public view returns (uint256, uint256, uint256)',
+    `function verifyInfo(address sender, address receiver, uint256 index) public view returns (string memory)`,
+    'function reuploadNum(address sender, address receiver, uint256 index, uint8 source, uint ni, uint ri) public',
+    'function showNum(address sender, address receiver, uint256 index) public view returns (uint256, uint256, uint8)',
+    'function getState(address sender, address receiver, uint256 index) public view returns (uint8)',
+    'function showLatestNum(address sender, address receiver) public view returns (uint256, uint256, uint8)',
+];
