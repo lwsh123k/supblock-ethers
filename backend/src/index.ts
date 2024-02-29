@@ -5,7 +5,8 @@ import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
 import { ethers } from 'ethers';
 import routes from './routes'; // 引入路由
-import { FairIntegerContract } from './contract-interaction/listenEvent';
+// import { FairIntegerContract } from './contract-interaction/listenEvent';
+import './contract-interaction/recordEvent';
 
 // 创建express和socketio
 // express和socketio是运行在http服务器上的两套不同的东西, 用于处理请求和长连接.
@@ -87,8 +88,8 @@ let sendPluginMessage = (addressA: string, addressB: string, fairIntegerNumber: 
         url: 'http://localhost:8000/fairIntegerSep.html',
     });
 };
-let fairIntegerContract = new FairIntegerContract();
-fairIntegerContract.listenNumUpload(sendPluginMessage);
+// let fairIntegerContract = new FairIntegerContract();
+// fairIntegerContract.listenNumUpload(sendPluginMessage);
 
 // 启动服务器
 server.listen(3000, function () {

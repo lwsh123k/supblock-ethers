@@ -1,10 +1,10 @@
-const hre = require('hardhat');
-const WriteAddress = require('./write-contract-address.js');
+import hre from 'hardhat';
+import WriteAddress from './write-contract-address.js';
 
 async function main() {
     // hardhat自带ethers.js
     const StoreData = await hre.ethers.getContractFactory('StoreData');
-    console.log('signer address: ', StoreData.signer.address);
+    console.log('signer address: ', await StoreData.signer.getAddress());
     // 生成部署合约实例, 可以设置参数, 此时合约还没有部署
     const storeData = await StoreData.deploy();
     console.log('contract address: ', storeData.address);
