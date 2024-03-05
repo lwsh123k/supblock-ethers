@@ -1,2 +1,4 @@
 node_modules/
 dist/
+# 排除父规则定义
+!.env  
