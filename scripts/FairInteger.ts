@@ -12,7 +12,7 @@ async function main() {
     const FairInteger = await ethers.getContractFactory('FairInteger');
     console.log('signer address: ', await FairInteger.signer.getAddress());
     // 生成部署合约实例, 可以设置参数, 此时合约还没有部署
-    const fairInteger = await FairInteger.deploy();
+    const fairInteger = await FairInteger.deploy(30, 30);
     console.log('contract address: ', fairInteger.address);
 
     // 将合约地址写入前端和后端

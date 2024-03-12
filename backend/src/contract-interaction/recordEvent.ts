@@ -10,10 +10,9 @@ const contract = new ethers.Contract(address.fairIntGenAddress, fairIntegerAbi, 
 
 export function record() {
     // 记录hash上传事件
-    contract.on('UploadHash', async (from, to, types, infoHash, event) => {
+    contract.on('UploadHash', async (from, to, types, infoHash, uploadTime, index, event) => {
         console.log(event);
         console.log(infoHash);
-        const block = await provider.getBlock(event.blockNumber);
         const transaction = await provider.getTransactionReceipt(event.transactionHash);
 
         let res = await prisma.uploadHash.create({
@@ -21,8 +20,9 @@ export function record() {
                 from: from,
                 to: to,
                 types: types,
-                infoHash: ethers.utils.hexlify(infoHash),
-                timestamp: new Date(block.timestamp * 1000), // 将Unix时间戳转换为JavaScript日期对象
+                infoHash: ethers.utils.hexlify(infoHash), // bytes32在js中对应的是16进制字符串
+                uploadTime: uploadTime.toString(),
+                index: index.toString(),
                 blockNum: event.blockNumber,
                 gas: transaction.gasUsed.toNumber(),
             },
@@ -31,19 +31,35 @@ export function record() {
     });
 
     // 记录随机数上传事件
-    contract.on('UpLoadNum', async (from, to, types, state, ni, ri, t, event) => {
-        const block = await provider.getBlock(event.blockNumber);
+    contract.on('UpLoadNum', async (from, to, types, ni, ri, t, uploadTime, event) => {
         const transaction = await provider.getTransactionReceipt(event.transactionHash);
         let res = await prisma.upLoadNum.create({
             data: {
                 from: from,
                 to: to,
                 types: types,
-                state: state,
                 ni: ni.toHexString(),
                 ri: ri.toHexString(),
                 t: t.toHexString(),
-                timestamp: new Date(block.timestamp * 1000), // 将Unix时间戳转换为JavaScript日期对象
+                uploadTime: uploadTime.toString(),
+                blockNum: event.blockNumber,
+                gas: transaction.gasUsed.toNumber(),
+            },
+        });
+        console.log(res);
+    });
+
+    // 记录随机数重新上传时间
+    contract.on('ReuploadNum', async (from, to, types, ni, ri, uploadTime, event) => {
+        const transaction = await provider.getTransactionReceipt(event.transactionHash);
+        let res = await prisma.reupLoadNum.create({
+            data: {
+                from: from,
+                to: to,
+                types: types,
+                ni: ni.toHexString(),
+                ri: ri.toHexString(),
+                uploadTime: uploadTime.toString(),
                 blockNum: event.blockNumber,
                 gas: transaction.gasUsed.toNumber(),
             },
