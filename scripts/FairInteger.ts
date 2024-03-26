@@ -4,20 +4,29 @@
 // You can also run a script with `npx hardhat run <script>`. If you do that, Hardhat
 // will compile your contracts, add the Hardhat Runtime Environment's members to the
 // global scope, and execute the script.
-import { ethers } from 'hardhat';
-import WriteAddress from './write-contract-address.js';
+import hre from 'hardhat';
+import { writeContractAbi } from './writeContractAbi';
+import { writeToFiles } from './writeContractAddress';
 
 async function main() {
-    // hardhat自带ethers.js
-    const FairInteger = await ethers.getContractFactory('FairInteger');
-    console.log('signer address: ', await FairInteger.signer.getAddress());
-    // 生成部署合约实例, 可以设置参数, 此时合约还没有部署
-    const fairInteger = await FairInteger.deploy(30, 30);
-    console.log('contract address: ', fairInteger.address);
+    // 部署合约
+    const contractName = 'FairInteger';
+    const MyContract = await hre.ethers.getContractFactory(contractName);
+    const myContract = await MyContract.deploy(30, 30);
 
-    // 将合约地址写入前端和后端
-    WriteAddress.writeToFiles('fairIntGenAddress', fairInteger.address);
-    await fairInteger.deployed();
+    // 等待部署完成
+    await myContract.deployed();
+    console.log(`${contractName} deployed to:`, myContract.address);
+
+    // 保存合约信息到JSON文件
+    const FormatTypes = hre.ethers.utils.FormatTypes;
+    const contractData = {
+        address: myContract.address,
+        abi: JSON.parse(myContract.interface.format(FormatTypes.json) as string),
+    };
+
+    writeContractAbi(contractName, contractData);
+    writeToFiles(contractName, myContract.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

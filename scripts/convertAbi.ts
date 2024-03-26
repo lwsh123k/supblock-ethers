@@ -1,7 +1,7 @@
 import { ethers } from 'hardhat';
 
 async function main() {
-    let fileName = 'StoreData';
+    let fileName = 'FairInteger';
     const jsonAbi = require(`../artifacts/contracts/${fileName}.sol/${fileName}.json`).abi;
 
     const iface = new ethers.utils.Interface(jsonAbi);

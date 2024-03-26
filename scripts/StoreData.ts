@@ -1,19 +1,28 @@
 import hre from 'hardhat';
-import WriteAddress from './write-contract-address.js';
+import { writeContractAbi } from './writeContractAbi';
+import { writeToFiles } from './writeContractAddress';
 
 async function main() {
-    // hardhat自带ethers.js
-    const StoreData = await hre.ethers.getContractFactory('StoreData');
-    console.log('signer address: ', await StoreData.signer.getAddress());
-    // 生成部署合约实例, 可以设置参数, 此时合约还没有部署
-    const storeData = await StoreData.deploy();
-    console.log('contract address: ', storeData.address);
-    WriteAddress.writeToFiles('storeDataAddress', storeData.address);
-    await storeData.deployed();
+    // 部署合约
+    const contractName = 'StoreData';
+    const MyContract = await hre.ethers.getContractFactory(contractName);
+    const myContract = await MyContract.deploy();
+
+    // 等待部署完成
+    await myContract.deployed();
+    console.log(`${contractName} deployed to:`, myContract.address);
+
+    // 保存合约信息到JSON文件
+    const FormatTypes = hre.ethers.utils.FormatTypes;
+    const contractData = {
+        address: myContract.address,
+        abi: JSON.parse(myContract.interface.format(FormatTypes.json) as string),
+    };
+
+    writeContractAbi(contractName, contractData);
+    writeToFiles(contractName, myContract.address);
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
 main().catch((error) => {
     console.error(error);
     process.exitCode = 1;

@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import address from './contract-address.json';
-import { fairIntegerAbi } from './abi';
+import { fairIntegerAbi } from './abi/abi';
 
 class FairIntegerContract {
     provider;
@@ -8,11 +8,7 @@ class FairIntegerContract {
     constructor() {
         // localhost被解析成IPv6, 所以此处要使用ip地址
         this.provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545');
-        this.contract = new ethers.Contract(
-            address.fairIntGenAddress,
-            fairIntegerAbi,
-            this.provider
-        );
+        this.contract = new ethers.Contract(address.FairInteger, fairIntegerAbi, this.provider);
 
         this.provider
             .getBlockNumber()

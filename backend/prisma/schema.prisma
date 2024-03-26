@@ -44,30 +44,50 @@ model SupBlock {
 }
 
 model UploadHash {
-    id        Int      @id @default(autoincrement())
-    from      String
-    to        String
-    types     Int
-    infoHash  String
-    timestamp DateTime
-    blockNum  Int
-    gas       Int
+    id          Int          @id @default(autoincrement())
+    from        String
+    to          String
+    types       Int
+    infoHash    String       @unique
+    index       String
+    timestamp   DateTime
+    blockNum    Int
+    gas         Int
+    uploadNum   UploadNum?
+    reuploadNum ReuploadNum?
 
     @@index([from, to, types], name: "idx_upload_hash")
 }
 
-model UpLoadNum {
-    id        Int      @id @default(autoincrement())
-    from      String
-    to        String
-    types     Int
-    state     Int
-    ni        String
-    ri        String
-    t         String
-    timestamp DateTime
-    blockNum  Int
-    gas       Int
+model UploadNum {
+    id         Int        @id @default(autoincrement())
+    from       String
+    to         String
+    types      Int
+    ni         String
+    ri         String
+    t          String
+    timestamp  DateTime
+    blockNum   Int
+    gas        Int
+    uploadHash UploadHash @relation(fields: [numHash], references: [infoHash])
+    numHash    String     @unique
 
     @@index([from, to, types], name: "idx_upload_num")
+}
+
+model ReuploadNum {
+    id           Int        @id @default(autoincrement())
+    from         String
+    to           String
+    types        Int
+    ni           String
+    ri           String
+    timestamp    DateTime
+    blockNum     Int
+    gas          Int
+    uploadHash   UploadHash @relation(fields: [originalHash], references: [infoHash])
+    originalHash String     @unique
+
+    @@index([from, to, types], name: "idx_reupload_num")
 }

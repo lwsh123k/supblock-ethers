@@ -8,10 +8,10 @@ const config: HardhatUserConfig = {
         // ganache not used
         // ganache: { url: 'http://127.0.0.1:8545' },
         hardhat: {
-            // mining: {
-            //     auto: false,
-            //     interval: [1000, 2000],
-            // },
+            mining: {
+                auto: false,
+                interval: [2000, 3000],
+            },
             accounts: {
                 mnemonic: 'test test test test test test test test test test test junk',
                 path: "m/44'/60'/0'/0",
@@ -20,6 +20,10 @@ const config: HardhatUserConfig = {
                 passphrase: '',
             },
         },
+    },
+    typechain: {
+        outDir: './typechain',
+        target: 'ethers-v5',
     },
 };
 

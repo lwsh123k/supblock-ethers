@@ -24,8 +24,8 @@ contract FairInteger {
 
 	// 由hash找到索引
 	struct hashIndexStruct {
-		address applicant;
-		address relay;
+		address req;
+		address res;
 		uint256 index;
 	}
 
@@ -45,6 +45,7 @@ contract FairInteger {
 		uint256 ni,
 		uint256 ri,
 		uint256 t,
+		bytes32 numHash,
 		uint256 uploadTime
 	);
 	event ReuploadNum(
@@ -53,6 +54,7 @@ contract FairInteger {
 		uint8 types,
 		uint ni,
 		uint ri,
+		bytes32 originalHash,
 		uint256 uploadTime
 	);
 
@@ -92,12 +94,12 @@ contract FairInteger {
 
 	// hash唯一
 	modifier onlyHash(bytes32 infoHash) {
-		require(hashIndex[infoHash].applicant != address(0), "hash exist");
+		require(hashIndex[infoHash].req == address(0), "hash exist");
 		_;
 	}
 
 	// 设置请求者infoHash
-	function setReqHash(address receiver, bytes32 mHash) public {
+	function setReqHash(address receiver, bytes32 mHash) public onlyHash(mHash) {
 		// 用hash是否等于0, 判断是否已经上传
 		require(mHash != 0, "hash is zero");
 		// 获取最新的数据, 要求上一次hashB已经上传 或者 超时未传
@@ -110,12 +112,15 @@ contract FairInteger {
 			);
 		}
 
+		// 记录hash
 		IntegerInfo memory integerInfo;
 		integerInfo.infoHashA = mHash;
 		integerInfo.tA = executeTime[msg.sender];
 		integerInfo.tB = executeTime[receiver];
 		integerInfo.hashTa = block.timestamp;
 		personalInteger[msg.sender][receiver].push(integerInfo);
+		// 记录索引
+		hashIndex[mHash] = hashIndexStruct({ req: msg.sender, res: receiver, index: len });
 		emit UploadHash(
 			msg.sender,
 			receiver,
@@ -142,6 +147,8 @@ contract FairInteger {
 		);
 		personalInteger[sender][msg.sender][len - 1].infoHashB = mHash;
 		personalInteger[sender][msg.sender][len - 1].hashTb = block.timestamp;
+		// 记录索引
+		hashIndex[mHash] = hashIndexStruct({ req: sender, res: msg.sender, index: len });
 		emit UploadHash(msg.sender, sender, 1, mHash, block.timestamp, len - 1);
 	}
 
@@ -165,13 +172,20 @@ contract FairInteger {
 		);
 		personalInteger[msg.sender][receiver][len - 1].niA = ni;
 		personalInteger[msg.sender][receiver][len - 1].riA = ri;
-		// 上传正确增加执行次数???
-		bytes32 hashA = keccak256(abi.encode(ni, integerInfo.tA, integerInfo.tB, ri));
-		if (hashA == integerInfo.infoHashA) {
-			executeTime[msg.sender]++;
-		}
+		// 执行就增加次数
+		executeTime[msg.sender]++;
+
 		// 记录请求者和响应者的事件不需要分开记录, 只需要上传之后就emit事件
-		emit UpLoadNum(msg.sender, receiver, 0, ni, ri, integerInfo.tA, block.timestamp);
+		emit UpLoadNum(
+			msg.sender,
+			receiver,
+			0,
+			ni,
+			ri,
+			integerInfo.tA,
+			integerInfo.infoHashA,
+			block.timestamp
+		);
 	}
 
 	// 响应者公开ni, ri.
@@ -197,11 +211,17 @@ contract FairInteger {
 		personalInteger[sender][msg.sender][len - 1].riB = ri;
 
 		// 增加执行次数
-		bytes32 hashB = keccak256(abi.encode(ni, integerInfo.tA, integerInfo.tB, ri));
-		if (hashB == integerInfo.infoHashB) {
-			executeTime[msg.sender]++;
-		}
-		emit UpLoadNum(msg.sender, sender, 1, ni, ri, integerInfo.tB, block.timestamp);
+		executeTime[msg.sender]++;
+		emit UpLoadNum(
+			msg.sender,
+			sender,
+			1,
+			ni,
+			ri,
+			integerInfo.tB,
+			integerInfo.infoHashB,
+			block.timestamp
+		);
 	}
 
 	// 请求者:获取执行次数, 插入位置的数组下标(从0开始)
@@ -219,7 +239,7 @@ contract FairInteger {
 	function getResExecuteTime(address sender) public view returns (uint256, uint256, uint256) {
 		uint256 len = personalInteger[sender][msg.sender].length;
 		require(len > 0, "empty array");
-		require(personalInteger[sender][msg.sender][len - 1].hashTb == 0, "not latest array");
+		require(personalInteger[sender][msg.sender][len - 1].hashTb == 0, "not latest array"); /////// 删除, emit 中同时包含a和b的执行次数
 		return (
 			personalInteger[sender][msg.sender][len - 1].tA,
 			personalInteger[sender][msg.sender][len - 1].tB,
@@ -257,6 +277,15 @@ contract FairInteger {
 			integerInfo.reuploadInfoA,
 			integerInfo.reuploadInfoB
 		);
+	}
+
+	// 返回最后一个数组内容
+	function showLatestStruct(
+		address sender,
+		address receiver
+	) public view returns (IntegerInfo memory) {
+		uint256 lastIndex = personalInteger[sender][receiver].length - 1;
+		return personalInteger[sender][receiver][lastIndex];
 	}
 
 	// 第三阶段, 统一检查
@@ -324,7 +353,15 @@ contract FairInteger {
 			personalInteger[msg.sender][to][index].niA = ni;
 			personalInteger[msg.sender][to][index].riA = ri;
 			personalInteger[msg.sender][to][index].reuploadInfoA = true;
-			emit ReuploadNum(msg.sender, to, types, ni, ri, block.timestamp);
+			emit ReuploadNum(
+				msg.sender,
+				to,
+				types,
+				ni,
+				ri,
+				personalInteger[msg.sender][to][index].infoHashA,
+				block.timestamp
+			);
 		}
 		// 响应者重传
 		if (types == 1) {
@@ -332,7 +369,15 @@ contract FairInteger {
 			personalInteger[msg.sender][to][index].niB = ni;
 			personalInteger[msg.sender][to][index].riB = ri;
 			personalInteger[msg.sender][to][index].reuploadInfoB = true;
-			emit ReuploadNum(msg.sender, to, types, ni, ri, block.timestamp);
+			emit ReuploadNum(
+				msg.sender,
+				to,
+				types,
+				ni,
+				ri,
+				personalInteger[msg.sender][to][index].infoHashB,
+				block.timestamp
+			);
 		}
 	}
 

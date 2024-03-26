@@ -1,0 +1,493 @@
+[
+  {
+    "type": "constructor",
+    "payable": false,
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "_hashTime"
+      },
+      {
+        "type": "uint256",
+        "name": "_numTime"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "anonymous": false,
+    "name": "ReuploadNum",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "from",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "to",
+        "indexed": true
+      },
+      {
+        "type": "uint8",
+        "name": "types",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "ni",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "ri",
+        "indexed": false
+      },
+      {
+        "type": "bytes32",
+        "name": "originalHash",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "uploadTime",
+        "indexed": false
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "anonymous": false,
+    "name": "UpLoadNum",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "from",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "to",
+        "indexed": true
+      },
+      {
+        "type": "uint8",
+        "name": "types",
+        "indexed": true
+      },
+      {
+        "type": "uint256",
+        "name": "ni",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "ri",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "t",
+        "indexed": false
+      },
+      {
+        "type": "bytes32",
+        "name": "numHash",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "uploadTime",
+        "indexed": false
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "anonymous": false,
+    "name": "UploadHash",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "from",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "to",
+        "indexed": true
+      },
+      {
+        "type": "uint8",
+        "name": "types",
+        "indexed": true
+      },
+      {
+        "type": "bytes32",
+        "name": "infoHash",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "uploadTime",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "index",
+        "indexed": false
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "UnifiedInspection",
+    "constant": true,
+    "stateMutability": "view",
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address",
+        "name": "to"
+      },
+      {
+        "type": "uint256",
+        "name": "index"
+      },
+      {
+        "type": "uint8",
+        "name": "types"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "bool",
+        "name": "result"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "getIndexOfHash",
+    "constant": true,
+    "stateMutability": "view",
+    "payable": false,
+    "inputs": [
+      {
+        "type": "bytes32",
+        "name": "infoHash"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "tuple",
+        "name": "index",
+        "components": [
+          {
+            "type": "address",
+            "name": "req"
+          },
+          {
+            "type": "address",
+            "name": "res"
+          },
+          {
+            "type": "uint256",
+            "name": "index"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "getReqExecuteTime",
+    "constant": true,
+    "stateMutability": "view",
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address",
+        "name": "receiver"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "uint256"
+      },
+      {
+        "type": "uint256"
+      },
+      {
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "getResExecuteTime",
+    "constant": true,
+    "stateMutability": "view",
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address",
+        "name": "sender"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "uint256"
+      },
+      {
+        "type": "uint256"
+      },
+      {
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "reuploadNum",
+    "constant": false,
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address",
+        "name": "to"
+      },
+      {
+        "type": "uint256",
+        "name": "index"
+      },
+      {
+        "type": "uint8",
+        "name": "types"
+      },
+      {
+        "type": "uint256",
+        "name": "ni"
+      },
+      {
+        "type": "uint256",
+        "name": "ri"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "setReqHash",
+    "constant": false,
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address",
+        "name": "receiver"
+      },
+      {
+        "type": "bytes32",
+        "name": "mHash"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "setReqInfo",
+    "constant": false,
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address",
+        "name": "receiver"
+      },
+      {
+        "type": "uint256",
+        "name": "ni"
+      },
+      {
+        "type": "uint256",
+        "name": "ri"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "setResHash",
+    "constant": false,
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address",
+        "name": "sender"
+      },
+      {
+        "type": "bytes32",
+        "name": "mHash"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "setResInfo",
+    "constant": false,
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address",
+        "name": "sender"
+      },
+      {
+        "type": "uint256",
+        "name": "ni"
+      },
+      {
+        "type": "uint256",
+        "name": "ri"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "showLatestNum",
+    "constant": true,
+    "stateMutability": "view",
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address",
+        "name": "sender"
+      },
+      {
+        "type": "address",
+        "name": "receiver"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "uint256"
+      },
+      {
+        "type": "uint256"
+      },
+      {
+        "type": "bool"
+      },
+      {
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "showLatestStruct",
+    "constant": true,
+    "stateMutability": "view",
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address",
+        "name": "sender"
+      },
+      {
+        "type": "address",
+        "name": "receiver"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "tuple",
+        "components": [
+          {
+            "type": "bytes32",
+            "name": "infoHashA"
+          },
+          {
+            "type": "uint256",
+            "name": "hashTa"
+          },
+          {
+            "type": "uint256",
+            "name": "niA"
+          },
+          {
+            "type": "uint256",
+            "name": "riA"
+          },
+          {
+            "type": "uint256",
+            "name": "tA"
+          },
+          {
+            "type": "bytes32",
+            "name": "infoHashB"
+          },
+          {
+            "type": "uint256",
+            "name": "hashTb"
+          },
+          {
+            "type": "uint256",
+            "name": "niB"
+          },
+          {
+            "type": "uint256",
+            "name": "riB"
+          },
+          {
+            "type": "uint256",
+            "name": "tB"
+          },
+          {
+            "type": "bool",
+            "name": "reuploadInfoA"
+          },
+          {
+            "type": "bool",
+            "name": "reuploadInfoB"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "showNum",
+    "constant": true,
+    "stateMutability": "view",
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address",
+        "name": "sender"
+      },
+      {
+        "type": "address",
+        "name": "receiver"
+      },
+      {
+        "type": "uint256",
+        "name": "index"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "uint256"
+      },
+      {
+        "type": "uint256"
+      },
+      {
+        "type": "bool"
+      },
+      {
+        "type": "bool"
+      }
+    ]
+  }
+]

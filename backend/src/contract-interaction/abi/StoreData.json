@@ -1,0 +1,138 @@
+[
+  {
+    "type": "event",
+    "anonymous": false,
+    "name": "storeDataEvent",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "from",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "to",
+        "indexed": true
+      },
+      {
+        "type": "bytes",
+        "name": "data",
+        "indexed": false
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "getData",
+    "constant": true,
+    "stateMutability": "view",
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address",
+        "name": "sender"
+      },
+      {
+        "type": "address",
+        "name": "receiver"
+      },
+      {
+        "type": "uint256",
+        "name": "index"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "bytes"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "getPublicKey",
+    "constant": true,
+    "stateMutability": "view",
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address",
+        "name": "user"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "bytes"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "publicKeys",
+    "constant": true,
+    "stateMutability": "view",
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "bytes"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "relayData",
+    "constant": true,
+    "stateMutability": "view",
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address"
+      },
+      {
+        "type": "address"
+      },
+      {
+        "type": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "bytes"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "setData",
+    "constant": false,
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address",
+        "name": "receiver"
+      },
+      {
+        "type": "bytes",
+        "name": "data"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "setPublicKey",
+    "constant": false,
+    "payable": false,
+    "inputs": [
+      {
+        "type": "bytes",
+        "name": "publicKey"
+      }
+    ],
+    "outputs": []
+  }
+]
