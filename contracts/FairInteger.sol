@@ -29,29 +29,56 @@ contract FairInteger {
 		uint256 index;
 	}
 
-	// 定义事件, 方便监听检索, 请求者type=0, 响应者type=1
-	event UploadHash(
+	// hash上传事件
+	event ReqHashUpload(
 		address indexed from,
 		address indexed to,
-		uint8 indexed types,
-		bytes32 infoHash,
+		bytes32 infoHashA,
+		uint256 tA,
+		uint256 tB,
 		uint256 uploadTime,
 		uint256 index
 	);
-	event UpLoadNum(
+	event ResHashUpload(
 		address indexed from,
 		address indexed to,
-		uint8 indexed types,
+		bytes32 infoHashB,
+		uint256 tA,
+		uint256 tB,
+		uint256 uploadTime,
+		uint256 index
+	);
+	// 随机数上传事件
+	event ReqInfoUpload(
+		address indexed from,
+		address indexed to,
 		uint256 ni,
 		uint256 ri,
 		uint256 t,
 		bytes32 numHash,
 		uint256 uploadTime
 	);
-	event ReuploadNum(
+	event ResInfoUpload(
 		address indexed from,
 		address indexed to,
-		uint8 types,
+		uint256 ni,
+		uint256 ri,
+		uint256 t,
+		bytes32 numHash,
+		uint256 uploadTime
+	);
+	// 随机数重传
+	event ReqReuploadNum(
+		address indexed from,
+		address indexed to,
+		uint ni,
+		uint ri,
+		bytes32 originalHash,
+		uint256 uploadTime
+	);
+	event ResReuploadNum(
+		address indexed from,
+		address indexed to,
 		uint ni,
 		uint ri,
 		bytes32 originalHash,
@@ -121,11 +148,12 @@ contract FairInteger {
 		personalInteger[msg.sender][receiver].push(integerInfo);
 		// 记录索引
 		hashIndex[mHash] = hashIndexStruct({ req: msg.sender, res: receiver, index: len });
-		emit UploadHash(
+		emit ReqHashUpload(
 			msg.sender,
 			receiver,
-			0,
 			mHash,
+			integerInfo.tA,
+			integerInfo.tB,
 			block.timestamp,
 			personalInteger[msg.sender][receiver].length - 1
 		);
@@ -149,7 +177,15 @@ contract FairInteger {
 		personalInteger[sender][msg.sender][len - 1].hashTb = block.timestamp;
 		// 记录索引
 		hashIndex[mHash] = hashIndexStruct({ req: sender, res: msg.sender, index: len });
-		emit UploadHash(msg.sender, sender, 1, mHash, block.timestamp, len - 1);
+		emit ResHashUpload(
+			msg.sender,
+			sender,
+			mHash,
+			integerInfo.tA,
+			integerInfo.tB,
+			block.timestamp,
+			len - 1
+		);
 	}
 
 	// 请求者公开ni, ri.
@@ -176,10 +212,9 @@ contract FairInteger {
 		executeTime[msg.sender]++;
 
 		// 记录请求者和响应者的事件不需要分开记录, 只需要上传之后就emit事件
-		emit UpLoadNum(
+		emit ReqInfoUpload(
 			msg.sender,
 			receiver,
-			0,
 			ni,
 			ri,
 			integerInfo.tA,
@@ -212,10 +247,9 @@ contract FairInteger {
 
 		// 增加执行次数
 		executeTime[msg.sender]++;
-		emit UpLoadNum(
+		emit ResInfoUpload(
 			msg.sender,
 			sender,
-			1,
 			ni,
 			ri,
 			integerInfo.tB,
@@ -233,13 +267,13 @@ contract FairInteger {
 		return (executeTime[msg.sender], executeTime[receiver], len);
 	}
 
-	// 响应者:获取执行成功次数
+	// 响应者:获取执行成功次数(not used)
 	/* 有一种情况: 当响应者通过executeTime获得执行成功次数时, 刚好执行成功了一次, 此时executeTime+1, 与请求者的不一致
 	    或者A请求B(通过socket请求, 所以查看hashTb是否为0)， 但是A没有上传新的数组，这会使得B获得的是上一个数组的旧数据 */
 	function getResExecuteTime(address sender) public view returns (uint256, uint256, uint256) {
 		uint256 len = personalInteger[sender][msg.sender].length;
 		require(len > 0, "empty array");
-		require(personalInteger[sender][msg.sender][len - 1].hashTb == 0, "not latest array"); /////// 删除, emit 中同时包含a和b的执行次数
+		// require(personalInteger[sender][msg.sender][len - 1].hashTb == 0, "not latest array"); /////// 删除, emit 中同时包含a和b的执行次数
 		return (
 			personalInteger[sender][msg.sender][len - 1].tA,
 			personalInteger[sender][msg.sender][len - 1].tB,
@@ -325,8 +359,6 @@ contract FairInteger {
 
 	// 重新上传随机数
 	function reuploadNum(address to, uint256 index, uint8 types, uint ni, uint ri) public {
-		// 索引正确
-		require(index < personalInteger[msg.sender][to].length, "error index");
 		require(types == 0 || types == 1, "wrong types");
 		IntegerInfo memory integerInfo;
 		if (types == 0) integerInfo = personalInteger[msg.sender][to][index];
@@ -338,8 +370,12 @@ contract FairInteger {
 			"requester or responder message hash not exists"
 		);
 
-		// 超过随机数上传的时间
-		require(integerInfo.hashTb + numTime < block.timestamp, "not exceed upload time");
+		// 超过随机数上传的时间 或者 双方都上传完成
+		require(
+			integerInfo.hashTb + numTime < block.timestamp ||
+				(integerInfo.riA != 0 && integerInfo.riB != 0),
+			"not exceed upload time"
+		);
 		// 随机数错误才能上传
 		require(UnifiedInspection(to, index, types) == false, "random is correct");
 
@@ -353,10 +389,9 @@ contract FairInteger {
 			personalInteger[msg.sender][to][index].niA = ni;
 			personalInteger[msg.sender][to][index].riA = ri;
 			personalInteger[msg.sender][to][index].reuploadInfoA = true;
-			emit ReuploadNum(
+			emit ReqReuploadNum(
 				msg.sender,
 				to,
-				types,
 				ni,
 				ri,
 				personalInteger[msg.sender][to][index].infoHashA,
@@ -366,16 +401,15 @@ contract FairInteger {
 		// 响应者重传
 		if (types == 1) {
 			console.log("22222");
-			personalInteger[msg.sender][to][index].niB = ni;
-			personalInteger[msg.sender][to][index].riB = ri;
-			personalInteger[msg.sender][to][index].reuploadInfoB = true;
-			emit ReuploadNum(
+			personalInteger[to][msg.sender][index].niB = ni;
+			personalInteger[to][msg.sender][index].riB = ri;
+			personalInteger[to][msg.sender][index].reuploadInfoB = true;
+			emit ResReuploadNum(
 				msg.sender,
 				to,
-				types,
 				ni,
 				ri,
-				personalInteger[msg.sender][to][index].infoHashB,
+				personalInteger[to][msg.sender][index].infoHashB,
 				block.timestamp
 			);
 		}

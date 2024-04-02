@@ -49,6 +49,8 @@ model UploadHash {
     to          String
     types       Int
     infoHash    String       @unique
+    tA          String
+    tB          String
     index       String
     timestamp   DateTime
     blockNum    Int

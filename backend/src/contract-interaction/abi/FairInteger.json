@@ -16,7 +16,7 @@
   {
     "type": "event",
     "anonymous": false,
-    "name": "ReuploadNum",
+    "name": "ReqHashUpload",
     "inputs": [
       {
         "type": "address",
@@ -29,28 +29,28 @@
         "indexed": true
       },
       {
-        "type": "uint8",
-        "name": "types",
-        "indexed": false
-      },
-      {
-        "type": "uint256",
-        "name": "ni",
-        "indexed": false
-      },
-      {
-        "type": "uint256",
-        "name": "ri",
-        "indexed": false
-      },
-      {
         "type": "bytes32",
-        "name": "originalHash",
+        "name": "infoHashA",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "tA",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "tB",
         "indexed": false
       },
       {
         "type": "uint256",
         "name": "uploadTime",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "index",
         "indexed": false
       }
     ]
@@ -58,7 +58,7 @@
   {
     "type": "event",
     "anonymous": false,
-    "name": "UpLoadNum",
+    "name": "ReqInfoUpload",
     "inputs": [
       {
         "type": "address",
@@ -68,11 +68,6 @@
       {
         "type": "address",
         "name": "to",
-        "indexed": true
-      },
-      {
-        "type": "uint8",
-        "name": "types",
         "indexed": true
       },
       {
@@ -105,7 +100,7 @@
   {
     "type": "event",
     "anonymous": false,
-    "name": "UploadHash",
+    "name": "ReqReuploadNum",
     "inputs": [
       {
         "type": "address",
@@ -118,13 +113,55 @@
         "indexed": true
       },
       {
-        "type": "uint8",
-        "name": "types",
+        "type": "uint256",
+        "name": "ni",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "ri",
+        "indexed": false
+      },
+      {
+        "type": "bytes32",
+        "name": "originalHash",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "uploadTime",
+        "indexed": false
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "anonymous": false,
+    "name": "ResHashUpload",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "from",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "to",
         "indexed": true
       },
       {
         "type": "bytes32",
-        "name": "infoHash",
+        "name": "infoHashB",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "tA",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "tB",
         "indexed": false
       },
       {
@@ -135,6 +172,85 @@
       {
         "type": "uint256",
         "name": "index",
+        "indexed": false
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "anonymous": false,
+    "name": "ResInfoUpload",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "from",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "to",
+        "indexed": true
+      },
+      {
+        "type": "uint256",
+        "name": "ni",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "ri",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "t",
+        "indexed": false
+      },
+      {
+        "type": "bytes32",
+        "name": "numHash",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "uploadTime",
+        "indexed": false
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "anonymous": false,
+    "name": "ResReuploadNum",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "from",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "to",
+        "indexed": true
+      },
+      {
+        "type": "uint256",
+        "name": "ni",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "ri",
+        "indexed": false
+      },
+      {
+        "type": "bytes32",
+        "name": "originalHash",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "uploadTime",
         "indexed": false
       }
     ]
