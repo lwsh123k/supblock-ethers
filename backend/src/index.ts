@@ -4,6 +4,8 @@ import cors from 'cors';
 import routes from './routes'; // 引入路由
 import { initSocket } from './socket';
 import { record } from './contract-interaction/recordEvent';
+import { getFairIntGen } from './contract-interaction/contract';
+import { ethers } from 'ethers';
 
 // 创建express和socketio
 // express和socketio是运行在http服务器上的两套不同的东西, 用于处理请求和长连接.
@@ -13,6 +15,7 @@ const server = http.createServer(app);
 
 // 中间件
 app.use(cors());
+
 app.use(express.json());
 
 // 使用路由

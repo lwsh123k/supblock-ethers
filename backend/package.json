@@ -8,9 +8,10 @@
         "start": "node dist/index.js",
         "perserve": "npm run build",
         "serve": "concurrently \"npx tsc -w\"  \"nodemon dist/index.js\"",
-        "dev": "nodemon --watch 'src/**/*.ts' --exec \"ts-node\" src/index.ts",
+        "dev": "nodemon src/index.ts",
         "generate-types": "npx typechain --target=ethers-v5 --out-dir src/contract-interaction/types 'src/contract-interaction/abi/*.json'",
-        "postinstall": "npm run generate-types"
+        "prisma:generate": "prisma generate",
+        "postinstall": "npm run generate-types & npm run prisma:generate"
     },
     "keywords": [],
     "author": "",

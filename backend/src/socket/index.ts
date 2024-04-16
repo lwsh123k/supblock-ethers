@@ -29,6 +29,7 @@ export function initSocket(
         let address = info.address;
         if (address === 'plugin') {
             console.log(`用户${address}加入`);
+            onlineUsers[address] = socket;
             next();
         } else {
             let signedAuthString = info.signedAuthString;
@@ -46,7 +47,7 @@ export function initSocket(
     });
 
     io.on('connection', function (socket) {
-        console.log('有用户连接: ' + socket.id);
+        // console.log('有用户连接: ' + socket.id);
 
         // 转发任意信息
         socket.onAny((eventName, data) => {

@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import { getFairIntGen } from './contract';
 import { provider } from './provider';
+import { ethers } from 'ethers';
+import { sendPluginMessage } from '../socket';
 
 const prisma = new PrismaClient();
 
@@ -11,7 +13,6 @@ export function record() {
     // 请求者hash上传
     let reqHashFilter = fairIntGen.filters.ReqHashUpload(); // 使用filter监听才有提示
     fairIntGen.on(reqHashFilter, async (from, to, infoHash, tA, tB, uploadTime, index, event) => {
-        console.log(event);
         console.log(infoHash);
         const transaction = await provider.getTransactionReceipt(event.transactionHash);
 
@@ -23,7 +24,7 @@ export function record() {
                 infoHash: infoHash,
                 tA: tA.toString(),
                 tB: tB.toString(),
-                timestamp: uploadTime.toString(),
+                timestamp: new Date(uploadTime.mul(1000).toNumber()),
                 index: index.toString(),
                 blockNum: event.blockNumber,
                 gas: transaction.gasUsed.toNumber(),
@@ -34,8 +35,6 @@ export function record() {
     // 响应者hash上传
     let resHashFilter = fairIntGen.filters.ResHashUpload();
     fairIntGen.on(resHashFilter, async (from, to, infoHash, tA, tB, uploadTime, index, event) => {
-        console.log(event);
-        console.log(infoHash);
         const transaction = await provider.getTransactionReceipt(event.transactionHash);
         let res = await prisma.uploadHash.create({
             data: {
@@ -45,7 +44,7 @@ export function record() {
                 infoHash: infoHash,
                 tA: tA.toString(),
                 tB: tB.toString(),
-                timestamp: uploadTime.toString(),
+                timestamp: new Date(uploadTime.mul(1000).toNumber()),
                 index: index.toString(),
                 blockNum: event.blockNumber,
                 gas: transaction.gasUsed.toNumber(),
@@ -57,43 +56,80 @@ export function record() {
     // 记录随机数上传事件
     // 请求者随机数上传
     let reqInfoFilter = fairIntGen.filters.ReqInfoUpload();
-    fairIntGen.on(reqInfoFilter, async (from, to, ni, ri, t, numHash, uploadTime, event) => {
+    fairIntGen.on(reqInfoFilter, async (from, to, ni, ri, tA, numHash, uploadTime, event) => {
         const transaction = await provider.getTransactionReceipt(event.transactionHash);
+        // 查询另一方是否正确
+        let other = await prisma.uploadHash.findFirst({
+            where: { from: to, to: from },
+            include: { uploadNum: true },
+            orderBy: {
+                id: 'desc',
+            },
+        });
+
+        // 判断自己随机数正确性
+        const hash = ethers.utils.solidityKeccak256(
+            ['uint256', 'uint256', 'uint256', 'uint256'],
+            [ni, tA, other?.tB, ri]
+        );
+        let iscorrect = hash === numHash;
         let res = await prisma.uploadNum.create({
             data: {
                 from: from,
                 to: to,
                 types: 0,
-                ni: ni.toHexString(),
+                ni: ni.toString(),
                 ri: ri.toHexString(),
-                t: t.toHexString(),
+                t: tA.toString(),
                 numHash: numHash,
-                timestamp: uploadTime.toString(),
+                timestamp: new Date(uploadTime.mul(1000).toNumber()),
                 blockNum: event.blockNumber,
                 gas: transaction.gasUsed.toNumber(),
+                correctness: iscorrect,
             },
         });
-        console.log(res);
+        console.log(iscorrect, other);
+        // 如果都正确, 通知extension打开新页面
+        if (iscorrect && other?.uploadNum?.correctness)
+            sendPluginMessage(from, to, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 100);
     });
     // 响应者随机数上传
     let resInfoFilter = fairIntGen.filters.ResInfoUpload();
-    fairIntGen.on(resInfoFilter, async (from, to, ni, ri, t, numHash, uploadTime, event) => {
+    fairIntGen.on(resInfoFilter, async (from, to, ni, ri, tB, numHash, uploadTime, event) => {
         const transaction = await provider.getTransactionReceipt(event.transactionHash);
+        // 查询另一方是否正确
+        let other = await prisma.uploadHash.findFirst({
+            where: { from: to, to: from },
+            include: { uploadNum: true },
+            orderBy: {
+                id: 'desc',
+            },
+        });
+
+        // 判断自己随机数正确性
+        const hash = ethers.utils.solidityKeccak256(
+            ['uint256', 'uint256', 'uint256', 'uint256'],
+            [ni, other?.tA, tB, ri]
+        );
+        let iscorrect = hash === numHash;
         let res = await prisma.uploadNum.create({
             data: {
                 from: from,
                 to: to,
                 types: 1,
-                ni: ni.toHexString(),
+                ni: ni.toString(),
                 ri: ri.toHexString(),
-                t: t.toHexString(),
+                t: tB.toString(),
                 numHash: numHash,
-                timestamp: uploadTime.toString(),
+                timestamp: new Date(uploadTime.mul(1000).toNumber()),
                 blockNum: event.blockNumber,
                 gas: transaction.gasUsed.toNumber(),
+                correctness: iscorrect,
             },
         });
-        console.log(res);
+        console.log(iscorrect, other);
+        if (iscorrect && other?.uploadNum?.correctness)
+            sendPluginMessage(from, to, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 100);
     });
 
     // 记录随机数重新上传时间
@@ -106,15 +142,15 @@ export function record() {
                 from: from,
                 to: to,
                 types: 0,
-                ni: ni.toHexString(),
+                ni: ni.toString(),
                 ri: ri.toHexString(),
                 originalHash: originalHash,
-                timestamp: uploadTime.toString(),
+                timestamp: new Date(uploadTime.mul(1000).toNumber()),
                 blockNum: event.blockNumber,
                 gas: transaction.gasUsed.toNumber(),
             },
         });
-        console.log(res);
+        sendPluginMessage(from, to, ni.toNumber() % 100);
     });
     // 响应者随机数上传
     let resReuploadNum = fairIntGen.filters.ResReuploadNum();
@@ -125,16 +161,14 @@ export function record() {
                 from: from,
                 to: to,
                 types: 1,
-                ni: ni.toHexString(),
+                ni: ni.toString(),
                 ri: ri.toHexString(),
                 originalHash: originalHash,
-                timestamp: uploadTime.toString(),
+                timestamp: new Date(uploadTime.mul(1000).toNumber()),
                 blockNum: event.blockNumber,
                 gas: transaction.gasUsed.toNumber(),
             },
         });
-        console.log(res);
+        sendPluginMessage(from, to, ni.toNumber() % 100);
     });
 }
-
-record();

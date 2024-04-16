@@ -8,7 +8,7 @@ import hre from 'hardhat';
 import { writeContractAbi } from './writeContractAbi';
 import { writeToFiles } from './writeContractAddress';
 
-async function main() {
+export async function fairIntegerFunction() {
     // 部署合约
     const contractName = 'FairInteger';
     const MyContract = await hre.ethers.getContractFactory(contractName);
@@ -25,13 +25,6 @@ async function main() {
         abi: JSON.parse(myContract.interface.format(FormatTypes.json) as string),
     };
 
-    writeContractAbi(contractName, contractData);
-    writeToFiles(contractName, myContract.address);
+    await writeContractAbi(contractName, contractData);
+    await writeToFiles(contractName, myContract.address);
 }
-
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
-main().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-});

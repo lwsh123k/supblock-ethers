@@ -1,5 +1,6 @@
-import fs from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
+import { existsSync } from 'fs';
 
 export async function writeContractAbi(
     contractName: string,
@@ -9,9 +10,9 @@ export async function writeContractAbi(
     // 写入abi
     const targetDir = path.join(__dirname, '..', fileDirectory);
     const targetFile = path.join(targetDir, `${contractName}.json`);
-    if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
+    if (!existsSync(targetDir)) {
+        await fs.mkdir(targetDir, { recursive: true });
     }
-    fs.writeFileSync(targetFile, JSON.stringify(contractData.abi, null, 2));
+    await fs.writeFile(targetFile, JSON.stringify(contractData.abi, null, 2));
     console.log(`Contract information saved to ${targetFile}`);
 }

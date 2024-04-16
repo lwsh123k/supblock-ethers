@@ -2,7 +2,7 @@ import hre from 'hardhat';
 import { writeContractAbi } from './writeContractAbi';
 import { writeToFiles } from './writeContractAddress';
 
-async function main() {
+export async function storeDataFunction() {
     // 部署合约
     const contractName = 'StoreData';
     const MyContract = await hre.ethers.getContractFactory(contractName);
@@ -19,11 +19,6 @@ async function main() {
         abi: JSON.parse(myContract.interface.format(FormatTypes.json) as string),
     };
 
-    writeContractAbi(contractName, contractData);
-    writeToFiles(contractName, myContract.address);
+    await writeContractAbi(contractName, contractData);
+    await writeToFiles(contractName, myContract.address);
 }
-
-main().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-});

@@ -62,18 +62,19 @@ model UploadHash {
 }
 
 model UploadNum {
-    id         Int        @id @default(autoincrement())
-    from       String
-    to         String
-    types      Int
-    ni         String
-    ri         String
-    t          String
-    timestamp  DateTime
-    blockNum   Int
-    gas        Int
-    uploadHash UploadHash @relation(fields: [numHash], references: [infoHash])
-    numHash    String     @unique
+    id          Int        @id @default(autoincrement())
+    from        String
+    to          String
+    types       Int
+    ni          String
+    ri          String
+    t           String // 执行次数
+    timestamp   DateTime
+    blockNum    Int
+    gas         Int
+    correctness Boolean
+    uploadHash  UploadHash @relation(fields: [numHash], references: [infoHash])
+    numHash     String     @unique // 外键, 作为随机数和hash数据的关联
 
     @@index([from, to, types], name: "idx_upload_num")
 }

@@ -328,31 +328,27 @@ contract FairInteger {
 		return hashIndex[infoHash];
 	}
 
-	// 检查对方的正确性. 和谁交互, 检查的索引, 是0 -> applicant还是1 -> relay
+	// 检查正确性, from: applicant, to: relay, 0: 检查to上传随机数正确性, 1: 检查from上传随机数正确性
+	// 只检查随机数正确性(假设双方都上传了随机数), 其他条件放到真正重传时进行
+	// 更多检查放到前端, 只有合适的时候才会调用重传, 重传的合约函数中也会进行检查
 	function UnifiedInspection(
+		address from,
 		address to,
 		uint index,
 		uint8 types
 	) public view returns (bool result) {
-		// 检查正确性
-		IntegerInfo memory info;
-		// 请求者就检查响应者上传的数字
+		// 检查正确性: 对方上传的是对的 || 对方已经重传过   返回    true
+		IntegerInfo memory info = personalInteger[from][to][index];
+		// form检查to上传的数字
 		if (types == 0) {
-			// 没有必要检查索引, 如果索引不对, 会自动revert
-			info = personalInteger[msg.sender][to][index];
-			// 是否上传, 要求rib != 0
-			if (info.riB == 0) return false;
-			// 上传是否正确
 			bytes32 hashB = keccak256(abi.encode(info.niB, info.tA, info.tB, info.riB));
-			if (hashB == info.infoHashB) return true;
+			if (hashB == info.infoHashB || info.reuploadInfoB == true) return true;
 			else return false;
 		}
-		// 响应者就检查请求者上传的数字
+		// to就检查from上传的数字
 		else if (types == 1) {
-			info = personalInteger[to][msg.sender][index];
-			if (info.riA == 0) return false;
 			bytes32 hashA = keccak256(abi.encode(info.niA, info.tA, info.tB, info.riA));
-			if (hashA == info.infoHashA) return true;
+			if (hashA == info.infoHashA || info.reuploadInfoA == true) return true;
 			else return false;
 		}
 	}
@@ -376,15 +372,17 @@ contract FairInteger {
 				(integerInfo.riA != 0 && integerInfo.riB != 0),
 			"not exceed upload time"
 		);
-		// 随机数错误才能上传
-		require(UnifiedInspection(to, index, types) == false, "random is correct");
-
-		// 之前没有重传过
-		if (types == 0) require(integerInfo.reuploadInfoA == false, "has reuploaded");
-		else require(integerInfo.reuploadInfoB == false, "has reuploaded");
 
 		// 请求者重传
 		if (types == 0) {
+			// 对方上传错误 && 自己已经上传 && 之前没有重传过 && 自己上传的是对的
+			require(UnifiedInspection(msg.sender, to, index, types) == false, "random is correct");
+			require(integerInfo.riA != 0, "random not upload");
+			require(integerInfo.reuploadInfoA == false, "random has reuploaded");
+			require(
+				UnifiedInspection(msg.sender, to, index, 1) == true,
+				"self random is not correct"
+			);
 			console.log("11111");
 			personalInteger[msg.sender][to][index].niA = ni;
 			personalInteger[msg.sender][to][index].riA = ri;
@@ -400,6 +398,13 @@ contract FairInteger {
 		}
 		// 响应者重传
 		if (types == 1) {
+			require(UnifiedInspection(to, msg.sender, index, types) == false, "random is correct");
+			require(integerInfo.riB != 0, "random not upload");
+			require(integerInfo.reuploadInfoB == false, "random has reuploaded");
+			require(
+				UnifiedInspection(to, msg.sender, index, 0) == true,
+				"self random is not correct"
+			);
 			console.log("22222");
 			personalInteger[to][msg.sender][index].niB = ni;
 			personalInteger[to][msg.sender][index].riB = ri;
@@ -414,55 +419,4 @@ contract FairInteger {
 			);
 		}
 	}
-
-	// not used.
-	// 验证正确性(index从0开始): 有一方上传错误
-	// 验证时间: 有一方没有上传  或者  有一方没有按规定时间上传
-
-	/* function verifyInfo(
-		address sender,
-		address receiver,
-		uint256 index
-	) public returns (string memory) {
-		uint256 len = personalInteger[sender][receiver].length;
-		require(index < len, "error index");
-		IntegerInfo memory integerInfo = personalInteger[sender][receiver][index];
-
-		// hash都没有上传
-		if (integerInfo.hashTa == 0) return "req not upload hash";
-		if (integerInfo.hashTb == 0) return "res not upload hash";
-		// 上传了hash, 但ni和ri上传出问题. 验证的时间点 > 等待上传的时间点
-		if (
-			integerInfo.hashTa + 60 seconds >= block.timestamp ||
-			integerInfo.hashTb + 60 seconds >= block.timestamp
-		) return "verify not in time";
-		// 有一方没有上传
-		if (integerInfo.niA == 0 || integerInfo.riA == 0) return "req not upload ni or ri";
-		if (integerInfo.niB == 0 || integerInfo.riB == 0) return "res not upload ni or ri";
-
-		// 取hash, 验证正确性
-		bytes32 hashA = keccak256(
-			abi.encode(integerInfo.niA, integerInfo.tA, integerInfo.tB, integerInfo.riA)
-		);
-		bytes32 hashB = keccak256(
-			abi.encode(integerInfo.niB, integerInfo.tA, integerInfo.tB, integerInfo.riB)
-		);
-
-		// 如果验证正确且以前没有验证过, 执行次数增加
-		personalInteger[sender][receiver][index].hasVerify = true;
-		if (hashA == integerInfo.infoHashA && hashB == integerInfo.infoHashB) {
-			if (!integerInfo.hasVerify) {
-				executeTime[sender]++;
-				executeTime[receiver]++;
-			}
-			return "both true proof";
-		} else if (hashA != integerInfo.infoHashA && hashB == integerInfo.infoHashB) {
-			if (!integerInfo.hasVerify) executeTime[receiver]++;
-			return "req false proof";
-		} else if (hashA == integerInfo.infoHashA && hashB != integerInfo.infoHashB) {
-			if (!integerInfo.hasVerify) executeTime[sender]++;
-			return "res false proof";
-		} else return "both false proof";
-	}
- */
 }
