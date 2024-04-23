@@ -54,18 +54,20 @@ contract FairInteger {
 		address indexed to,
 		uint256 ni,
 		uint256 ri,
-		uint256 t,
-		bytes32 numHash,
-		uint256 uploadTime
+		uint256 tA,
+		bytes32 hashA,
+		uint256 uploadTime,
+        uint256 tB
 	);
 	event ResInfoUpload(
 		address indexed from,
 		address indexed to,
 		uint256 ni,
 		uint256 ri,
-		uint256 t,
-		bytes32 numHash,
-		uint256 uploadTime
+		uint256 tB,
+		bytes32 hashB,
+		uint256 uploadTime,
+        uint256 tA
 	);
 	// 随机数重传
 	event ReqReuploadNum(
@@ -219,7 +221,8 @@ contract FairInteger {
 			ri,
 			integerInfo.tA,
 			integerInfo.infoHashA,
-			block.timestamp
+			block.timestamp,
+            integerInfo.tB
 		);
 	}
 
@@ -254,7 +257,8 @@ contract FairInteger {
 			ri,
 			integerInfo.tB,
 			integerInfo.infoHashB,
-			block.timestamp
+			block.timestamp,
+            integerInfo.tA
 		);
 	}
 

@@ -82,17 +82,22 @@
       },
       {
         "type": "uint256",
-        "name": "t",
+        "name": "tA",
         "indexed": false
       },
       {
         "type": "bytes32",
-        "name": "numHash",
+        "name": "hashA",
         "indexed": false
       },
       {
         "type": "uint256",
         "name": "uploadTime",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "tB",
         "indexed": false
       }
     ]
@@ -203,17 +208,22 @@
       },
       {
         "type": "uint256",
-        "name": "t",
+        "name": "tB",
         "indexed": false
       },
       {
         "type": "bytes32",
-        "name": "numHash",
+        "name": "hashB",
         "indexed": false
       },
       {
         "type": "uint256",
         "name": "uploadTime",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "tA",
         "indexed": false
       }
     ]

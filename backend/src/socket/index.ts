@@ -63,7 +63,20 @@ export function initSocket(
 
 // 将双方上传随机数完成的消息发送给插件
 // 监听随机数上传, 并将信息告诉extension, extension打开新页面, 告诉applicant和relay可以发送信息了
-export function sendPluginMessage(addressA: string, addressB: string, fairIntegerNumber: number) {
+// 避免extension重复打开页面
+let hasOpened = new Map<string, boolean>();
+export function sendPluginMessage(
+    addressA: string,
+    addressB: string,
+    fairIntegerNumber: number,
+    hash?: { hashA: string; hashB: string }
+) {
+    // 避免打开两次
+    if (hash) {
+        if (hasOpened.has(hash.hashA)) return;
+        hasOpened.set(hash.hashA, true);
+        hasOpened.set(hash.hashB, true);
+    }
     let pluginSocket = onlineUsers['plugin'];
     // 请求打开新页面, partner是指: 响应者, 此时请求者和响应者都需要给next relay发送消息.
     pluginSocket.emit('open a new tab', {

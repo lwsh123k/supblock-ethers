@@ -56,23 +56,15 @@ export function record() {
     // 记录随机数上传事件
     // 请求者随机数上传
     let reqInfoFilter = fairIntGen.filters.ReqInfoUpload();
-    fairIntGen.on(reqInfoFilter, async (from, to, ni, ri, tA, numHash, uploadTime, event) => {
-        const transaction = await provider.getTransactionReceipt(event.transactionHash);
-        // 查询另一方是否正确
-        let other = await prisma.uploadHash.findFirst({
-            where: { from: to, to: from },
-            include: { uploadNum: true },
-            orderBy: {
-                id: 'desc',
-            },
-        });
-
+    fairIntGen.on(reqInfoFilter, async (from, to, ni, ri, tA, numHash, uploadTime, tB, event) => {
+        const transaction = await event.getTransactionReceipt();
         // 判断自己随机数正确性
         const hash = ethers.utils.solidityKeccak256(
             ['uint256', 'uint256', 'uint256', 'uint256'],
-            [ni, tA, other?.tB, ri]
+            [ni, tA, tB, ri]
         );
         let iscorrect = hash === numHash;
+        // 上传信息
         let res = await prisma.uploadNum.create({
             data: {
                 from: from,
@@ -88,15 +80,6 @@ export function record() {
                 correctness: iscorrect,
             },
         });
-        console.log(iscorrect, other);
-        // 如果都正确, 通知extension打开新页面
-        if (iscorrect && other?.uploadNum?.correctness)
-            sendPluginMessage(from, to, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 100);
-    });
-    // 响应者随机数上传
-    let resInfoFilter = fairIntGen.filters.ResInfoUpload();
-    fairIntGen.on(resInfoFilter, async (from, to, ni, ri, tB, numHash, uploadTime, event) => {
-        const transaction = await provider.getTransactionReceipt(event.transactionHash);
         // 查询另一方是否正确
         let other = await prisma.uploadHash.findFirst({
             where: { from: to, to: from },
@@ -105,13 +88,25 @@ export function record() {
                 id: 'desc',
             },
         });
-
+        console.log(iscorrect, other);
+        // 如果都正确, 通知extension打开新页面
+        if (iscorrect && other?.uploadNum?.correctness)
+            sendPluginMessage(from, to, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 100, {
+                hashA: hash,
+                hashB: other.infoHash,
+            });
+    });
+    // 响应者随机数上传
+    let resInfoFilter = fairIntGen.filters.ResInfoUpload();
+    fairIntGen.on(resInfoFilter, async (from, to, ni, ri, tB, numHash, uploadTime, tA, event) => {
+        const transaction = await provider.getTransactionReceipt(event.transactionHash);
         // 判断自己随机数正确性
         const hash = ethers.utils.solidityKeccak256(
             ['uint256', 'uint256', 'uint256', 'uint256'],
-            [ni, other?.tA, tB, ri]
+            [ni, tA, tB, ri]
         );
         let iscorrect = hash === numHash;
+        // 上传随机数
         let res = await prisma.uploadNum.create({
             data: {
                 from: from,
@@ -127,9 +122,21 @@ export function record() {
                 correctness: iscorrect,
             },
         });
+        // 查询另一方是否正确
+        let other = await prisma.uploadHash.findFirst({
+            where: { from: to, to: from },
+            include: { uploadNum: true },
+            orderBy: {
+                id: 'desc',
+            },
+        });
+
         console.log(iscorrect, other);
         if (iscorrect && other?.uploadNum?.correctness)
-            sendPluginMessage(from, to, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 100);
+            sendPluginMessage(from, to, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 100, {
+                hashB: hash,
+                hashA: other.infoHash,
+            });
     });
 
     // 记录随机数重新上传时间
