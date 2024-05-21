@@ -66,8 +66,8 @@ export function initSocket(
 // 避免extension重复打开页面
 let hasOpened = new Map<string, boolean>();
 export function sendPluginMessage(
-    addressA: string,
-    addressB: string,
+    applicant: string,
+    relay: string,
     fairIntegerNumber: number,
     hash?: { hashA: string; hashB: string }
 ) {
@@ -80,9 +80,10 @@ export function sendPluginMessage(
     let pluginSocket = onlineUsers['plugin'];
     // 请求打开新页面, partner是指: 响应者, 此时请求者和响应者都需要给next relay发送消息.
     pluginSocket.emit('open a new tab', {
-        from: addressA,
+        from: 'server',
         to: 'plugin',
-        partner: addressB,
+        applicant,
+        relay,
         number: fairIntegerNumber,
         url: 'http://localhost:5173/bridge',
     });

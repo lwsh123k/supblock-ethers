@@ -133,7 +133,7 @@ export function record() {
 
         console.log(iscorrect, other);
         if (iscorrect && other?.uploadNum?.correctness)
-            sendPluginMessage(from, to, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 100, {
+            sendPluginMessage(to, from, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 100, {
                 hashB: hash,
                 hashA: other.infoHash,
             });
@@ -176,6 +176,6 @@ export function record() {
                 gas: transaction.gasUsed.toNumber(),
             },
         });
-        sendPluginMessage(from, to, ni.toNumber() % 100);
+        sendPluginMessage(to, from, ni.toNumber() % 100);
     });
 }

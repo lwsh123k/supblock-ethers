@@ -2,21 +2,63 @@
   {
     "type": "event",
     "anonymous": false,
-    "name": "storeDataEvent",
+    "name": "App2RelayEvent",
     "inputs": [
       {
         "type": "address",
-        "name": "from",
+        "name": "applicant",
         "indexed": true
       },
       {
         "type": "address",
-        "name": "to",
+        "name": "preRelay",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "relay",
         "indexed": true
       },
       {
         "type": "bytes",
         "name": "data",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "dataIndex",
+        "indexed": false
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "anonymous": false,
+    "name": "Pre2NextEvent",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "applicant",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "preRelay",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "relay",
+        "indexed": true
+      },
+      {
+        "type": "bytes",
+        "name": "data",
+        "indexed": false
+      },
+      {
+        "type": "uint256",
+        "name": "dataIndex",
         "indexed": false
       }
     ]
@@ -107,13 +149,38 @@
   },
   {
     "type": "function",
-    "name": "setData",
+    "name": "setApp2Relay",
     "constant": false,
     "payable": false,
     "inputs": [
       {
         "type": "address",
-        "name": "receiver"
+        "name": "preRelay"
+      },
+      {
+        "type": "address",
+        "name": "relay"
+      },
+      {
+        "type": "bytes",
+        "name": "data"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "setPre2Next",
+    "constant": false,
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address",
+        "name": "applicant"
+      },
+      {
+        "type": "address",
+        "name": "relay"
       },
       {
         "type": "bytes",
