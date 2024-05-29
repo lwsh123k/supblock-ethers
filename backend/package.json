@@ -27,6 +27,7 @@
         "@prisma/client": "^5.8.1",
         "bigi": "^1.4.2",
         "cors": "^2.8.5",
+        "dotenv": "^16.4.5",
         "eccrypto": "^1.1.6",
         "ecurve": "^1.0.6",
         "eth-crypto": "^2.6.0",
@@ -34,6 +35,8 @@
         "express": "^4.18.2",
         "keccak": "^3.0.3",
         "mongodb": "6.1",
+        "pino": "^9.1.0",
+        "pino-pretty": "^11.1.0",
         "socket.io": "^4.6.1",
         "uuid": "^9.0.0"
     },

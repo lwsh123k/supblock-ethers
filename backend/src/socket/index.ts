@@ -3,6 +3,7 @@ import { Server, Socket } from 'socket.io';
 import { authString } from '../routes/authentication';
 import { ethers } from 'ethers';
 import { DefaultEventsMap } from 'socket.io/dist/typed-events';
+import { logger } from '../util/logger';
 
 let io: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>;
 const onlineUsers: { [propName: string]: Socket } = {};
@@ -12,6 +13,7 @@ type AuthInfo = {
     signedAuthString: string;
 };
 
+let blindingNumberMap = new Map<string, number>(); // 存储applicant temp address => blindlingNumber的映射
 export function initSocket(
     server: http.Server<typeof http.IncomingMessage, typeof http.ServerResponse>
 ) {
@@ -28,7 +30,7 @@ export function initSocket(
         // console.log(socket.handshake);
         let address = info.address;
         if (address === 'plugin') {
-            console.log(`用户${address}加入`);
+            logger.info(`user ${address} join`);
             onlineUsers[address] = socket;
             next();
         } else {
@@ -38,7 +40,7 @@ export function initSocket(
                     address ===
                     ethers.utils.verifyMessage(authString.get(address) as string, signedAuthString);
                 if (res) {
-                    console.log(`用户${address}加入`);
+                    logger.info(`user ${address} join`);
                     onlineUsers[address] = socket;
                     next();
                 }
@@ -47,9 +49,21 @@ export function initSocket(
     });
 
     io.on('connection', function (socket) {
-        // console.log('有用户连接: ' + socket.id);
+        // 监听特定事件, 特定事件触发
+        // applicant一开始将blinding number发送给服务器端, 用于之后的插件打开新页面
+        // fair integer = (blinding number + joint random number selection) % 100
+        socket.on(
+            'blinding number',
+            (data: { blindingNumber: number[]; tempAccountAddress: string[] }) => {
+                logger.info(data, 'blinding number');
+                let { blindingNumber, tempAccountAddress } = data;
+                tempAccountAddress.map((value, index) => {
+                    blindingNumberMap.set(value, blindingNumber[index]);
+                });
+            }
+        );
 
-        // 转发任意信息
+        // 监听所有事件, 任何事件都会触发
         socket.onAny((eventName, data) => {
             if (['join', 'pluginConnection'].includes(eventName)) return;
             const toSocket = onlineUsers[data.to];
@@ -77,6 +91,10 @@ export function sendPluginMessage(
         hasOpened.set(hash.hashA, true);
         hasOpened.set(hash.hashB, true);
     }
+    // fair integer = (blinding number + joint random number selection) % 100
+    if (!blindingNumberMap.has(applicant)) throw new Error('blinding number does not exist');
+    fairIntegerNumber = (fairIntegerNumber + blindingNumberMap.get(applicant)!) % 100;
+
     let pluginSocket = onlineUsers['plugin'];
     // 请求打开新页面, partner是指: 响应者, 此时请求者和响应者都需要给next relay发送消息.
     pluginSocket.emit('open a new tab', {

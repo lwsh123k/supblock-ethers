@@ -3,6 +3,7 @@ import { getFairIntGen } from './contract';
 import { provider } from './provider';
 import { ethers } from 'ethers';
 import { sendPluginMessage } from '../socket';
+import { logger } from '../util/logger';
 
 const prisma = new PrismaClient();
 
@@ -30,7 +31,8 @@ export function record() {
                 gas: transaction.gasUsed.toNumber(),
             },
         });
-        console.log(res);
+        logger.info({ res }, 'applicant hash upload');
+        // console.log(res);
     });
     // 响应者hash上传
     let resHashFilter = fairIntGen.filters.ResHashUpload();
@@ -50,7 +52,8 @@ export function record() {
                 gas: transaction.gasUsed.toNumber(),
             },
         });
-        console.log(res);
+        logger.info({ res }, 'relay hash upload');
+        // console.log(res);
     });
 
     // 记录随机数上传事件
@@ -88,7 +91,8 @@ export function record() {
                 id: 'desc',
             },
         });
-        console.log(iscorrect, other);
+        logger.info({ correctness: iscorrect }, 'applicant random number upload');
+        // console.log(iscorrect, other);
         // 如果都正确, 通知extension打开新页面
         if (iscorrect && other?.uploadNum?.correctness)
             sendPluginMessage(from, to, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 100, {
@@ -131,7 +135,8 @@ export function record() {
             },
         });
 
-        console.log(iscorrect, other);
+        logger.info({ correctness: iscorrect }, `relay random number upload`);
+        // console.log(iscorrect, other);
         if (iscorrect && other?.uploadNum?.correctness)
             sendPluginMessage(to, from, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 100, {
                 hashB: hash,
@@ -157,6 +162,7 @@ export function record() {
                 gas: transaction.gasUsed.toNumber(),
             },
         });
+        logger.info({ ni: res.ni }, 'applicant random number reupload');
         sendPluginMessage(from, to, ni.toNumber() % 100);
     });
     // 响应者随机数上传
@@ -176,6 +182,7 @@ export function record() {
                 gas: transaction.gasUsed.toNumber(),
             },
         });
+        logger.info({ ni: res.ni }, 'relay random number reupload');
         sendPluginMessage(to, from, ni.toNumber() % 100);
     });
 }
