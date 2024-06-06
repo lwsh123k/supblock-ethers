@@ -36,7 +36,7 @@ contract StoreData {
 
 	// 具体的数据存储到数组, applicant, pre relay, relay之间的关系存储到event
 	// set: applicant -> relay
-	// 这里的applicant指与当前relay对应的temp account. 当relay检测到事件时, 尝试验证hash是否正确, 如果正确, relay给temp account发送它使用的匿名账户
+	// 这里的applicant指与pre relay对应的temp account. 当relay检测到事件时, 尝试验证hash是否正确, 如果正确, relay给temp account发送它使用的匿名账户
 	function setApp2Relay(address preRelay, address relay, bytes memory data) public {
 		relayData[msg.sender][relay].push(data);
 		emit App2RelayEvent(
@@ -51,7 +51,8 @@ contract StoreData {
 	// set: pre -> next
 	function setPre2Next(address relay, bytes memory data) public {
 		relayData[msg.sender][relay].push(data);
-		// 使用applicant泄露applicant和pre relay之间的关系, 此处的applicant指与pre relay对应的temp account
+		// 使用applicant泄露applicant和pre relay之间的关系
+		// 此处的applicant不能为real applicant, 可以为与pre relay对应的temp account??
 		emit Pre2NextEvent(
 			// applicant,
 			msg.sender,
