@@ -4,9 +4,11 @@ import { authString } from '../routes/authentication';
 import { ethers } from 'ethers';
 import { DefaultEventsMap } from 'socket.io/dist/typed-events';
 import { logger } from '../util/logger';
+import { onlineUsers } from './users';
+import { useAuthMiddleware } from './middleware';
+import { handleChainInit, handleValidator2Next } from './handleValidator';
 
 let io: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>;
-const onlineUsers: { [propName: string]: Socket } = {};
 
 type AuthInfo = {
     address: string;
@@ -24,29 +26,8 @@ export function initSocket(
         },
     });
 
-    // 认证中间件
-    io.use((socket, next) => {
-        const info = socket.handshake.query as AuthInfo;
-        // console.log(socket.handshake);
-        let address = info.address;
-        if (address === 'plugin') {
-            logger.info(`user ${address} join`);
-            onlineUsers[address] = socket;
-            next();
-        } else {
-            let signedAuthString = info.signedAuthString;
-            if (address && authString.has(address) && signedAuthString) {
-                let res =
-                    address ===
-                    ethers.utils.verifyMessage(authString.get(address) as string, signedAuthString);
-                if (res) {
-                    logger.info(`user ${address} join`);
-                    onlineUsers[address] = socket;
-                    next();
-                }
-            }
-        }
-    });
+    // 认证中间件, socket登录需要user使用私钥加密字符串，服务器端通过公钥验证
+    io.use(useAuthMiddleware);
 
     io.on('connection', function (socket) {
         // 监听特定事件, 特定事件触发
@@ -63,14 +44,30 @@ export function initSocket(
             }
         );
 
-        // 监听所有事件, 任何事件都会触发
+        // 除了特定事件, 其他的都会转发
+        let excludeEvent = [
+            'join',
+            'pluginConnection',
+            'applicant to validator: initialization data',
+            'new tab opening finished to validator',
+        ];
         socket.onAny((eventName, data) => {
-            if (['join', 'pluginConnection'].includes(eventName)) return;
+            if (excludeEvent.includes(eventName)) return;
             const toSocket = onlineUsers[data.to];
             if (toSocket) {
                 console.log('from: ', data.from, '\nto: ', data.to, '\ndata:', data);
                 toSocket.emit(eventName, data);
             }
+        });
+
+        // app to relay: chain initialization
+        socket.on('applicant to validator: initialization data', (data) => {
+            handleChainInit(socket, data);
+        });
+
+        // plugin to validator, validator收到plugin打开新页面的信息之后, 给下一个relay发送信息
+        socket.on('new tab opening finished to validator', async (data) => {
+            await handleValidator2Next(socket, data);
         });
     });
 }
@@ -97,12 +94,16 @@ export function sendPluginMessage(
 
     let pluginSocket = onlineUsers['plugin'];
     // 请求打开新页面, partner是指: 响应者, 此时请求者和响应者都需要给next relay发送消息.
-    pluginSocket.emit('open a new tab', {
-        from: 'server',
-        to: 'plugin',
-        applicant,
-        relay,
-        number: fairIntegerNumber,
-        url: 'http://localhost:5173/bridge',
-    });
+    if (pluginSocket) {
+        // 将validator改到server side, plugin将打开新页面的信息回送到server
+        if (relay === '0x863218e6ADad41bC3c2cb4463E26B625564ea3Ba') relay = 'validator';
+        pluginSocket.emit('open a new tab', {
+            from: 'server',
+            to: 'plugin',
+            applicant,
+            relay,
+            number: fairIntegerNumber,
+            url: 'http://localhost:5173/bridge',
+        });
+    } else logger.error('plugin not connect');
 }

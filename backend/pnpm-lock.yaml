@@ -17,6 +17,9 @@ dependencies:
   '@prisma/client':
     specifier: ^5.8.1
     version: 5.10.2(prisma@5.10.2)
+  '@types/keccak':
+    specifier: ^3.0.4
+    version: 3.0.4
   bigi:
     specifier: ^1.4.2
     version: 1.4.2
@@ -42,7 +45,7 @@ dependencies:
     specifier: ^4.18.2
     version: 4.18.2
   keccak:
-    specifier: ^3.0.3
+    specifier: ^3.0.4
     version: 3.0.4
   mongodb:
     specifier: '6.1'
@@ -661,6 +664,12 @@ packages:
   /@types/json-schema@7.0.15:
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
     dev: true
+
+  /@types/keccak@3.0.4:
+    resolution: {integrity: sha512-hdnkmbie7tE0yXnQQvlIOqCyjEsoXDVEZ3ACqO+F305XgUOW4Z9ElWdogCXXRAW/khnZ7GxM0t/BGB5bORKt/g==}
+    dependencies:
+      '@types/node': 20.11.22
+    dev: false
 
   /@types/mime@1.3.5:
     resolution: {integrity: sha512-/pyBZWSLD2n0dcHE3hq8s8ZvcETHtEuF+3E7XVt0Ig2nvsVQXdghHVcEkIWjy9A0wKfTn97a/PSDYohKIlnP/w==}

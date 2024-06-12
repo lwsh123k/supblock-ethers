@@ -8,8 +8,8 @@ const prisma = new PrismaClient();
 // 数据库自增索引id从1开始, 而文件索引从0开始: 1: applicant, 2-100: relay. validator不进行查询, 直接记录在前端页面中
 slqiteRouter.post('/getAccountInfo', async (req, res) => {
     let index = req.body.index;
-    index++;
-    console.log('searching index: ', index);
+    console.log('searching public key with index ', index);
+    index++; // index in database
     try {
         let info = await prisma.supBlock.findUnique({
             where: {

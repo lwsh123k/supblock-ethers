@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
-import { getFairIntGen } from './contract';
-import { provider } from './provider';
+import { getFairIntGen } from './getContractInstance';
+import { provider } from './util/provider';
 import { ethers } from 'ethers';
 import { sendPluginMessage } from '../socket';
 import { logger } from '../util/logger';
@@ -31,7 +31,7 @@ export function record() {
                 gas: transaction.gasUsed.toNumber(),
             },
         });
-        logger.info({ res }, 'applicant hash upload');
+        // logger.info({ res }, 'applicant hash upload');
         // console.log(res);
     });
     // 响应者hash上传
@@ -52,7 +52,7 @@ export function record() {
                 gas: transaction.gasUsed.toNumber(),
             },
         });
-        logger.info({ res }, 'relay hash upload');
+        // logger.info({ res }, 'relay hash upload');
         // console.log(res);
     });
 
