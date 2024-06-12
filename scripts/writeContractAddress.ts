@@ -33,7 +33,7 @@ async function writeContractAddress(
 export async function writeToFiles(contractName: string, contractAddress: string) {
     let fileName = 'contract-address.json';
     // let frontendPath = path.join(__dirname, '..', 'app/src/js/contract-interaction', fileName);
-    let backendPath = path.join(__dirname, '..', 'backend/src/contract-interaction', fileName);
+    let backendPath = path.join(__dirname, '..', 'backend/src/contract', fileName);
     // writeContractAddress(frontendPath, contractName, contractAddress);
     await writeContractAddress(backendPath, contractName, contractAddress);
 }

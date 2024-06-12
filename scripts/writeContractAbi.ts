@@ -5,7 +5,7 @@ import { existsSync } from 'fs';
 export async function writeContractAbi(
     contractName: string,
     contractData: { address: string; abi: string },
-    fileDirectory: string = 'backend/src/contract-interaction/abi'
+    fileDirectory: string = 'backend/src/contract/abi'
 ) {
     // 写入abi
     const targetDir = path.join(__dirname, '..', fileDirectory);

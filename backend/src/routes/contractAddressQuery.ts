@@ -1,5 +1,5 @@
 import express from 'express';
-import address from '../contract-interaction/contract-address.json';
+import address from '../contract/contract-address.json';
 
 const contractAddressRouter = express.Router();
 

@@ -3,9 +3,10 @@ import http from 'http';
 import cors from 'cors';
 import routes from './routes'; // 引入路由
 import { initSocket } from './socket';
-import { record } from './contract-interaction/recordEvent';
-import { getFairIntGen } from './contract-interaction/contract';
+import { record } from './contract/recordEvent';
+import { getFairIntGen } from './contract/getContractInstance';
 import { ethers } from 'ethers';
+import { validatorListen } from './contract/eventListen/validatorListen';
 
 // 创建express和socketio
 // express和socketio是运行在http服务器上的两套不同的东西, 用于处理请求和长连接.
@@ -26,6 +27,7 @@ initSocket(server);
 
 // 监听并记录随机数; 双方上传随机数完成时, 告诉插件打开新页面
 record();
+validatorListen();
 
 // 启动服务器
 server.listen(3000, function () {
