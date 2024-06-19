@@ -6,12 +6,7 @@
     "inputs": [
       {
         "type": "address",
-        "name": "applicant",
-        "indexed": true
-      },
-      {
-        "type": "address",
-        "name": "preRelay",
+        "name": "from",
         "indexed": true
       },
       {
@@ -38,7 +33,7 @@
     "inputs": [
       {
         "type": "address",
-        "name": "preRelay",
+        "name": "from",
         "indexed": true
       },
       {
@@ -148,10 +143,6 @@
     "constant": false,
     "payable": false,
     "inputs": [
-      {
-        "type": "address",
-        "name": "preRelay"
-      },
       {
         "type": "address",
         "name": "relay"

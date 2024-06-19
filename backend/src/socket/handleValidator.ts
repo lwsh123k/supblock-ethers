@@ -19,9 +19,11 @@ export type AppToRelayData = {
 
 let app2ValidatorData = new Map<string, AppToRelayData>();
 export function handleChainInit(socket: Socket, data: AppToRelayData) {
-    logger.info(data, 'applicant to validator: initialization data');
+    logger.info('applicant to validator: initialization data');
     // verify data
     let { from, to, r, hf, hb, b, c } = data;
+    if (from === null || r === null || hf === null)
+        logger.error('applicant to validator: initialization data, data lack error');
     let result = verifyHashForward(from!, r!, hf!, null);
 
     // if right, save and send back to applicant
@@ -73,8 +75,8 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
             t: null,
         };
         try {
-            // 找到随机数对应的地址
-            let accountAddress = await prisma.supBlock.findUnique({
+            // 找到随机数对应的next relay地址
+            let nxetRelay = await prisma.supBlock.findUnique({
                 where: {
                     id: number,
                 },
@@ -83,13 +85,13 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
                     address: true,
                 },
             });
-            if (accountAddress === null) throw new Error('error when find public key using index');
-            let encryptedData = await getEncryptData(accountAddress.publicKey, nextRelayData);
+            if (nxetRelay === null) throw new Error('error when find public key using index');
+            let encryptedData = await getEncryptData(nxetRelay.publicKey, nextRelayData);
 
             // upload to blockchain
-            await writeStoreData.setPre2Next(accountAddress.address, encryptedData);
+            await writeStoreData.setPre2Next(nxetRelay.address, encryptedData);
         } catch (error) {
-            logger.error('error when validator upload data to next relay');
+            logger.error(error, 'error when validator upload data to next relay');
         }
     } else {
         logger.error('validator not received data when send data to next relay');

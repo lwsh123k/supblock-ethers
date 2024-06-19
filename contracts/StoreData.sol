@@ -7,19 +7,8 @@ contract StoreData {
 	mapping(address => bytes) public publicKeys;
 	mapping(address => mapping(address => bytes[])) public relayData;
 
-	event App2RelayEvent(
-		address indexed applicant,
-		address indexed preRelay,
-		address indexed relay,
-		bytes data,
-		uint dataIndex
-	);
-	event Pre2NextEvent(
-		address indexed preRelay,
-		address indexed relay,
-		bytes data,
-		uint dataIndex
-	);
+	event App2RelayEvent(address indexed from, address indexed relay, bytes data, uint dataIndex);
+	event Pre2NextEvent(address indexed from, address indexed relay, bytes data, uint dataIndex);
 
 	// 存储公钥
 	function setPublicKey(bytes memory publicKey) public {
@@ -34,32 +23,20 @@ contract StoreData {
 		return publicKeys[user];
 	}
 
-	// 具体的数据存储到数组, applicant, pre relay, relay之间的关系存储到event
-	// set: applicant -> relay
-	// 这里的applicant指与pre relay对应的temp account. 当relay检测到事件时, 尝试验证hash是否正确, 如果正确, relay给temp account发送它使用的匿名账户
-	function setApp2Relay(address preRelay, address relay, bytes memory data) public {
+	// set: pre applicant tempAccount-> relay
+	// 合约中的数据是公开的, 谁给relay发送了数据是公开的.
+	// 能公开pre app temp和pre relay关系??  怎么去追溯??? 根据正向链追溯???
+	// 不需要数组遍历的方式去对应pre app tempAccount和pre relay, pre app tempAccount和pre relay给relay发送的数据包含了他们之间的关系
+	function setApp2Relay(address relay, bytes memory data) public {
 		relayData[msg.sender][relay].push(data);
-		emit App2RelayEvent(
-			msg.sender,
-			preRelay,
-			relay,
-			data,
-			relayData[msg.sender][relay].length - 1
-		);
+		emit App2RelayEvent(msg.sender, relay, data, relayData[msg.sender][relay].length - 1);
 	}
 
-	// set: pre -> next
+	// set: pre relay -> next
 	function setPre2Next(address relay, bytes memory data) public {
 		relayData[msg.sender][relay].push(data);
-		// 使用applicant泄露applicant和pre relay之间的关系
-		// 此处的applicant不能为real applicant, 可以为与pre relay对应的temp account??
-		emit Pre2NextEvent(
-			// applicant,
-			msg.sender,
-			relay,
-			data,
-			relayData[msg.sender][relay].length - 1
-		);
+		// applicant为与pre relay对应的pre applicant tempAccount
+		emit Pre2NextEvent(msg.sender, relay, data, relayData[msg.sender][relay].length - 1);
 	}
 
 	// get: applicant -> relay. index从0开始计数

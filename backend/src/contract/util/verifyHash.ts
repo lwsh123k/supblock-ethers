@@ -1,4 +1,5 @@
-import createKeccakHash from 'keccak';
+import { sha256 } from '@noble/hashes/sha256';
+import { bytesToHex as toHex, randomBytes } from '@noble/hashes/utils';
 
 // 验证正向hash
 export function verifyHashForward(
@@ -24,7 +25,9 @@ export function verifyHashBackward(
 
 // 对任意个数的参数取hash
 export function keccak256(...args: string[]) {
-    let hash = createKeccakHash('keccak256');
+    const hash = sha256.create();
     for (let arg of args) hash.update(arg.toString());
-    return hash.digest('hex');
+    const result = toHex(hash.digest());
+    // console.log(result);
+    return result;
 }
