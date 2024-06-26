@@ -75,10 +75,10 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
             t: null,
         };
         try {
-            // 找到随机数对应的next relay地址
+            // index -> relay real name address
             let nxetRelay = await prisma.supBlock.findUnique({
                 where: {
-                    id: number,
+                    id: number + 1,
                 },
                 select: {
                     publicKey: true,
