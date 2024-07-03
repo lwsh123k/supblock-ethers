@@ -45,14 +45,17 @@ interface NumInfo {
     relay: string;
     number: number;
 }
-type Relay2NextData = {
-    applicantTempAccount: string;
-    relayAnonymousAccount?: string;
+// current relay -> next relay
+export type PreToNextRelayData = {
+    from: null | string; // current relay anonymous account
+    to: null | string; // relay
+    preAppTempAccount: null | string; // 和pre relay对应的pre app temp account, 和AppToRelayData中from对应
+    preRelayAccount: null | string; // pre relay anonymous account = from
     hf: null | string;
     hb: null | string;
-    b?: null | number;
-    randomNumber?: number;
-    t?: null | string;
+    b: null | number;
+    n: null | number;
+    t: null | string; // ??????????
 };
 
 // validator收到plugin打开新页面的信息之后, 给下一个relay发送信息
@@ -62,16 +65,18 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
     // select data and encrypt data
     let { from, to, applicant, relay, number } = data;
     let dataFromApplicant = app2ValidatorData.get(applicant);
-    let nextRelayData: Relay2NextData;
+    let nextRelayData: PreToNextRelayData;
     if (dataFromApplicant) {
         let { hf, hb, b } = dataFromApplicant;
         nextRelayData = {
-            applicantTempAccount: applicant,
-            relayAnonymousAccount: '0x863218e6ADad41bC3c2cb4463E26B625564ea3Ba',
+            from: '0x863218e6ADad41bC3c2cb4463E26B625564ea3Ba',
+            to: null,
+            preAppTempAccount: applicant,
+            preRelayAccount: '0x863218e6ADad41bC3c2cb4463E26B625564ea3Ba',
             hf,
             hb,
             b,
-            randomNumber: number,
+            n: number,
             t: null,
         };
         try {
@@ -86,6 +91,7 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
                 },
             });
             if (nxetRelay === null) throw new Error('error when find public key using index');
+            nextRelayData.to = nxetRelay.address;
             let encryptedData = await getEncryptData(nxetRelay.publicKey, nextRelayData);
 
             // upload to blockchain
