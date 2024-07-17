@@ -31,7 +31,7 @@ export function record() {
                 gas: transaction.gasUsed.toNumber(),
             },
         });
-        // logger.info({ res }, 'applicant hash upload');
+        logger.info('applicant hash upload to database');
         // console.log(res);
     });
     // 响应者hash上传
@@ -52,7 +52,7 @@ export function record() {
                 gas: transaction.gasUsed.toNumber(),
             },
         });
-        // logger.info({ res }, 'relay hash upload');
+        logger.info('relay hash upload to database');
         // console.log(res);
     });
 
