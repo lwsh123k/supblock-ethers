@@ -15,7 +15,11 @@ type AuthInfo = {
     signedAuthString: string;
 };
 
-let blindingNumberMap = new Map<string, number>(); // 存储applicant temp address => blindlingNumber的映射
+// 存储r => { applicant temp address, blindlingNumber } 的映射
+let hashToBMapping = new Map<
+    string,
+    { blindingNumber: number; tempAccount: string; relayAccount: string }
+>();
 export function initSocket(
     server: http.Server<typeof http.IncomingMessage, typeof http.ServerResponse>
 ) {
@@ -35,11 +39,17 @@ export function initSocket(
         // fair integer = (blinding number + joint random number selection) % 100
         socket.on(
             'blinding number',
-            (data: { blindingNumber: number[]; tempAccountAddress: string[] }) => {
-                logger.info(data, 'blinding number');
-                let { blindingNumber, tempAccountAddress } = data;
-                tempAccountAddress.map((value, index) => {
-                    blindingNumberMap.set(value, blindingNumber[index]);
+            (data: {
+                blindingNumber: number;
+                tempAccount: string;
+                relayAccount: string;
+                hash: string;
+            }) => {
+                let { blindingNumber, tempAccount, relayAccount, hash } = data;
+                hashToBMapping.set(hash, {
+                    blindingNumber,
+                    tempAccount,
+                    relayAccount,
                 });
             }
         );
@@ -80,18 +90,20 @@ export function sendPluginMessage(
     applicant: string,
     relay: string,
     fairIntegerNumber: number,
-    hash?: { hashA: string; hashB: string }
+    hashA: string
 ) {
-    // 避免打开两次
-    if (hash) {
-        if (hasOpened.has(hash.hashA)) return;
-        hasOpened.set(hash.hashA, true);
-        hasOpened.set(hash.hashB, true);
-    }
-    // fair integer = (blinding number + joint random number selection) % 100
-    if (!blindingNumberMap.has(applicant)) throw new Error('blinding number does not exist');
-    fairIntegerNumber = (fairIntegerNumber + blindingNumberMap.get(applicant)!) % 100;
+    // server会检测applicant和relay上传随机数, 会调用2次sendPluginMessage, 避免同一页面打开两次
+    if (hasOpened.has(hashA)) return;
+    hasOpened.set(hashA, true);
 
+    // fair integer = (blinding number + joint random number selection) % 100
+    let blindingNumber;
+    if (!hashToBMapping.has(hashA)) {
+        throw new Error('blinding number does not exist');
+    } else blindingNumber = hashToBMapping.get(hashA)?.blindingNumber!;
+    let blindedFairIntNum = (fairIntegerNumber + blindingNumber) % 100;
+
+    // send to plugin
     let pluginSocket = onlineUsers['plugin'];
     // 请求打开新页面, partner是指: 响应者, 此时请求者和响应者都需要给next relay发送消息.
     if (pluginSocket) {
@@ -102,7 +114,10 @@ export function sendPluginMessage(
             to: 'plugin',
             applicant,
             relay,
-            number: fairIntegerNumber,
+            blindedFairIntNum: blindedFairIntNum,
+            fairIntegerNumber,
+            blindingNumber,
+            hashOfApplicant: hashA,
             url: 'http://localhost:5173/bridge',
         });
     } else logger.error('plugin not connect');

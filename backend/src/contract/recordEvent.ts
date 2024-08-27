@@ -93,12 +93,10 @@ export function record() {
         });
         logger.info({ correctness: iscorrect }, 'applicant random number upload');
         // console.log(iscorrect, other);
-        // 如果都正确, 通知extension打开新页面
+        // 如果都正确, 通知extension打开新页面;
+        // 没办法知道请求者和响应者谁先上传, 所以都会调用sendPluginMessage, 然后在函数中判断只触发一次
         if (iscorrect && other?.uploadNum?.correctness)
-            sendPluginMessage(from, to, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 100, {
-                hashA: hash,
-                hashB: other.infoHash,
-            });
+            sendPluginMessage(from, to, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 100, hash);
     });
     // 响应者随机数上传
     let resInfoFilter = fairIntGen.filters.ResInfoUpload();
@@ -138,10 +136,12 @@ export function record() {
         logger.info({ correctness: iscorrect }, `relay random number upload`);
         // console.log(iscorrect, other);
         if (iscorrect && other?.uploadNum?.correctness)
-            sendPluginMessage(to, from, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 100, {
-                hashB: hash,
-                hashA: other.infoHash,
-            });
+            sendPluginMessage(
+                to,
+                from,
+                (ni.toNumber() + Number(other?.uploadNum?.ni)) % 100,
+                other.infoHash
+            );
     });
 
     // 记录随机数重新上传时间
@@ -163,7 +163,7 @@ export function record() {
             },
         });
         logger.info({ ni: res.ni }, 'applicant random number reupload');
-        sendPluginMessage(from, to, ni.toNumber() % 100);
+        sendPluginMessage(from, to, ni.toNumber() % 100, originalHash);
     });
     // 响应者随机数上传
     let resReuploadNum = fairIntGen.filters.ResReuploadNum();
@@ -182,7 +182,18 @@ export function record() {
                 gas: transaction.gasUsed.toNumber(),
             },
         });
+        // find applicant's hash through from and to
+        let findResult = await prisma.uploadHash.findFirst({
+            where: { from: to, to: from },
+            select: {
+                infoHash: true,
+            },
+            orderBy: {
+                id: 'desc',
+            },
+        });
+
         logger.info({ ni: res.ni }, 'relay random number reupload');
-        sendPluginMessage(to, from, ni.toNumber() % 100);
+        sendPluginMessage(to, from, ni.toNumber() % 100, findResult?.infoHash!);
     });
 }
