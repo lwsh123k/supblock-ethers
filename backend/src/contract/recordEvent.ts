@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { getFairIntGen } from './getContractInstance';
 import { provider } from './util/provider';
 import { ethers } from 'ethers';
-import { sendPluginMessage } from '../socket';
+import { sendPluginMessage } from '../socket/handlePluginMessage';
 import { logger } from '../util/logger';
 
 const prisma = new PrismaClient();

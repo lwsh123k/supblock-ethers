@@ -7,9 +7,10 @@
         "start": "concurrently -n \"hardhatStart, nodemon, webpack\" -c \"bgBlue.bold,bgMagenta.bold,bgGreen.bold\" \"npm run hardhatStart\" \"npm run backendDev\" \"npm run appDev\"",
         "appDev": "cd app && npx webpack server",
         "backendDev": "cd backend && npx nodemon ./index-socket-new.js",
-        "hardhatDev": "npx hardhat node",
-        "hardhatDeploy": "npx hardhat run --network localhost .\\scripts\\FairInteger.js && npx hardhat run --network localhost .\\scripts\\StoreMsg.js",
-        "hardhatStart": "npm run hardhatDev && npm run hardhatDeploy",
+        "hardhat": "concurrently --kill-others-on-fail --success \"first\" --names \"node,wait\" \"npm run hardhatNode\" \"npm run waitForNode\"",
+        "hardhatNode": "npx hardhat node",
+        "waitForNode": "wait-on http://127.0.0.1:8545 && npm run hardhatDeploy",
+        "hardhatDeploy": "npx hardhat run --network localhost ./scripts/deployAll.ts",
         "compile": "npx hardhat compile"
     },
     "keywords": [],

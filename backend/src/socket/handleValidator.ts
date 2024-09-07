@@ -15,6 +15,7 @@ export type AppToRelayData = {
     hb: null | string;
     b: null | number;
     c: null | number;
+    chainIndex: number;
 };
 
 let app2ValidatorData = new Map<string, AppToRelayData>();
@@ -34,16 +35,21 @@ export function handleChainInit(socket: Socket, data: AppToRelayData) {
         sendBackData.to = data.from;
         sendBackData.tokenHash =
             '0x3333333333333333333333333333333333333333333333333333333333333333'; // 暂时为固定值
+        sendBackData.chainIndex = data.chainIndex;
         socket.emit('verify correct', sendBackData);
     }
 }
 
 interface NumInfo {
-    from: string;
-    to: string;
+    from: string; // always is 'server'
+    to: string; // always is 'plugin'
     applicant: string;
     relay: string;
-    number: number;
+    blindedFairIntNum: number; // b + fair integer
+    fairIntegerNumber: number;
+    blindingNumber: number; // b
+    url: string;
+    hashOfApplicant: string;
 }
 // current relay -> next relay
 export type PreToNextRelayData = {
@@ -63,7 +69,7 @@ const prisma = new PrismaClient();
 export async function handleValidator2Next(socket: Socket, data: NumInfo) {
     logger.info('plugin to validator: new page opened');
     // select data and encrypt data
-    let { from, to, applicant, relay, number } = data;
+    let { from, to, applicant, relay, blindedFairIntNum } = data;
     let dataFromApplicant = app2ValidatorData.get(applicant);
     let nextRelayData: PreToNextRelayData;
     if (dataFromApplicant) {
@@ -76,14 +82,14 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
             hf,
             hb,
             b,
-            n: number,
+            n: blindedFairIntNum,
             t: null,
         };
         try {
             // index -> relay real name address
             let nxetRelay = await prisma.supBlock.findUnique({
                 where: {
-                    id: number + 1,
+                    id: blindedFairIntNum + 1,
                 },
                 select: {
                     publicKey: true,

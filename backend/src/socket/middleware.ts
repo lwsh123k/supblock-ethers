@@ -17,7 +17,7 @@ export function useAuthMiddleware(socket: Socket, next: (err?: ExtendedError | u
     if (address === 'plugin') {
         logger.info(`user ${address} join`);
         onlineUsers[address] = socket;
-        next();
+        // next();
     } else {
         let signedAuthString = info.signedAuthString;
         if (address && authString.has(address) && signedAuthString) {
@@ -27,8 +27,10 @@ export function useAuthMiddleware(socket: Socket, next: (err?: ExtendedError | u
             if (res) {
                 logger.info(`user ${address} join`);
                 onlineUsers[address] = socket;
-                next();
+                // next();
             }
         }
     }
+    // for testing, always have user get reconnected
+    next();
 }
