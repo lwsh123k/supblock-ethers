@@ -6,7 +6,13 @@ import { DefaultEventsMap } from 'socket.io/dist/typed-events';
 import { logger } from '../util/logger';
 import { onlineUsers } from './users';
 import { useAuthMiddleware } from './middleware';
-import { handleChainInit, handleValidator2Next } from './handleValidator';
+import {
+    AppToRelayData,
+    handleChainInit,
+    handleFinalData,
+    handleValidator2Next,
+    PreToNextRelayData,
+} from './handleValidator';
 import { AppBlindUpload, handleAppBlindUpload, hashToBMapping } from './handlePluginMessage';
 
 let io: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>;
@@ -39,6 +45,8 @@ export function initSocket(
             'applicant to validator: initialization data',
             'new tab opening finished to validator',
             'blinding number',
+            'applicant to validator: final data',
+            'relay to validator: final data',
         ];
         socket.onAny((eventName, data) => {
             if (excludeEvent.includes(eventName)) return;
@@ -63,6 +71,15 @@ export function initSocket(
         // plugin to validator, validator收到plugin打开新页面的信息之后, 给下一个relay发送信息
         socket.on('new tab opening finished to validator', async (data) => {
             await handleValidator2Next(socket, data);
+        });
+
+        // applicant send final data to validator
+        socket.on('applicant to validator: final data', async (data: AppToRelayData) => {
+            await handleFinalData(socket, data);
+        });
+        // relay send final data to validator
+        socket.on('relay to validator: final data', async (data: PreToNextRelayData) => {
+            await handleFinalData(socket, data);
         });
     });
 }

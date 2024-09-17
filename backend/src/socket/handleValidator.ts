@@ -10,19 +10,30 @@ import { getStoreData } from '../contract/getContractInstance';
 export type AppToRelayData = {
     from: null | string;
     to: null | string;
+    appTempAccount: null | string;
     r: null | string;
     hf: null | string;
     hb: null | string;
     b: null | number;
     c: null | number;
+    l: number;
     chainIndex: number;
+    lastUserRelay?: boolean;
 };
 
+// validator send back
+export type ValidatorSendBackInit = {
+    from: string;
+    to: string;
+    chainIndex: string;
+    tokenHash: string;
+};
 let app2ValidatorData = new Map<string, AppToRelayData>();
+let validatorSendBackData = new Map<string, ValidatorSendBackInit>();
 export function handleChainInit(socket: Socket, data: AppToRelayData) {
     logger.info('applicant to validator: initialization data');
     // verify data
-    let { from, to, r, hf, hb, b, c } = data;
+    let { from, to, r, hf, hb, b, c, chainIndex } = data;
     if (from === null || r === null || hf === null)
         logger.error('applicant to validator: initialization data, data lack error');
     let result = verifyHashForward(from!, r!, hf!, null);
@@ -31,8 +42,8 @@ export function handleChainInit(socket: Socket, data: AppToRelayData) {
     if (result) {
         if (from) app2ValidatorData.set(from, data); // save data from applicant
         let sendBackData: any = {};
-        sendBackData.from = data.to;
-        sendBackData.to = data.from;
+        sendBackData.from = data.to!;
+        sendBackData.to = data.from!;
         sendBackData.tokenHash =
             '0x3333333333333333333333333333333333333333333333333333333333333333'; // 暂时为固定值
         sendBackData.chainIndex = data.chainIndex;
@@ -62,6 +73,7 @@ export type PreToNextRelayData = {
     b: null | number;
     n: null | number;
     t: null | string; // ??????????
+    l: number;
 };
 
 // validator收到plugin打开新页面的信息之后, 给下一个relay发送信息
@@ -71,6 +83,8 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
     // select data and encrypt data
     let { from, to, applicant, relay, blindedFairIntNum } = data;
     let dataFromApplicant = app2ValidatorData.get(applicant);
+    // find t corresponding to applicant address
+    // let token = app2ValidatorData.get()
     let nextRelayData: PreToNextRelayData;
     if (dataFromApplicant) {
         let { hf, hb, b } = dataFromApplicant;
@@ -83,10 +97,11 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
             hb,
             b,
             n: blindedFairIntNum,
-            t: null,
+            t: '0x3333333333333333333333333333333333333333333333333333333333333333',
+            l: 0, // validator's relay index is 0
         };
         try {
-            // index -> relay real name address
+            // find index of relay real name address
             let nxetRelay = await prisma.supBlock.findUnique({
                 where: {
                     id: blindedFairIntNum + 1,
@@ -108,4 +123,56 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
     } else {
         logger.error('validator not received data when send data to next relay');
     }
+}
+
+type CombinedData = {
+    appToRelayData?: AppToRelayData;
+    preToNextRelayData?: PreToNextRelayData;
+};
+let allAppToRelayData: AppToRelayData[] = [],
+    allPreToNextRelayData: PreToNextRelayData[] = [];
+export async function handleFinalData(socket: Socket, data: PreToNextRelayData | AppToRelayData) {
+    // save data
+    if (typeof data === 'object' && data !== null && 'appTempAccount' in data) {
+        allAppToRelayData.push(data);
+
+        console.log('receive final data from app: ', data);
+    } else {
+        allPreToNextRelayData.push(data);
+        console.log('receive final data from app: ', data);
+    }
+    // verify data
+    let res = verifyData();
+    // send token t to applicant
+    socket.emit('validator send token t', res); // for test
+    if (res.verify) socket.emit('validator send token t', res);
+}
+
+function verifyData() {
+    let result: { verify: Boolean; token: string; chainId: number } = {
+        verify: false,
+        token: '',
+        chainId: -1,
+    };
+    for (let appToRelayData of allAppToRelayData) {
+        for (let preToNextRelayData of allPreToNextRelayData) {
+            // 验证正向hash
+            let hf = appToRelayData.hf,
+                preHf = preToNextRelayData.hf,
+                r = appToRelayData.r,
+                appTempAccount = appToRelayData.appTempAccount,
+                token = preToNextRelayData.t;
+            if (!hf || !preHf || !r || !appTempAccount || !token) return result;
+            let res1 = verifyHashForward(appTempAccount, r, hf, preHf);
+            console.log('data to next relay verification result: ', res1);
+            if (res1) {
+                result.verify = true;
+                result.token = token;
+                result.chainId = appToRelayData.chainIndex;
+                return result;
+            }
+        }
+    }
+
+    return result;
 }

@@ -23,6 +23,11 @@
         "type": "uint256",
         "name": "dataIndex",
         "indexed": false
+      },
+      {
+        "type": "bool",
+        "name": "lastRelay",
+        "indexed": false
       }
     ]
   },
@@ -150,6 +155,10 @@
       {
         "type": "bytes",
         "name": "data"
+      },
+      {
+        "type": "bool",
+        "name": "lastRelay"
       }
     ],
     "outputs": []

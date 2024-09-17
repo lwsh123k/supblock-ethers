@@ -7,7 +7,13 @@ contract StoreData {
 	mapping(address => bytes) public publicKeys;
 	mapping(address => mapping(address => bytes[])) public relayData;
 
-	event App2RelayEvent(address indexed from, address indexed relay, bytes data, uint dataIndex);
+	event App2RelayEvent(
+		address indexed from,
+		address indexed relay,
+		bytes data,
+		uint dataIndex,
+		bool lastRelay
+	);
 	event Pre2NextEvent(address indexed from, address indexed relay, bytes data, uint dataIndex);
 
 	// 存储公钥
@@ -27,9 +33,15 @@ contract StoreData {
 	// 合约中的数据是公开的, 谁给relay发送了数据是公开的.
 	// 能公开pre app temp和pre relay关系??  怎么去追溯??? 根据正向链追溯???
 	// 不需要数组遍历的方式去对应pre app tempAccount和pre relay, pre app tempAccount和pre relay给relay发送的数据包含了他们之间的关系
-	function setApp2Relay(address relay, bytes memory data) public {
+	function setApp2Relay(address relay, bytes memory data, bool lastRelay) public {
 		relayData[msg.sender][relay].push(data);
-		emit App2RelayEvent(msg.sender, relay, data, relayData[msg.sender][relay].length - 1);
+		emit App2RelayEvent(
+			msg.sender,
+			relay,
+			data,
+			relayData[msg.sender][relay].length - 1,
+			lastRelay // true only when app sends to last user relay
+		);
 	}
 
 	// set: pre relay -> next
