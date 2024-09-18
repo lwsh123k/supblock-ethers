@@ -65,7 +65,7 @@ export function initSocket(
 
         // app to relay: chain initialization
         socket.on('applicant to validator: initialization data', (data) => {
-            handleChainInit(socket, data);
+            handleChainInit(socket, data); //1111
         });
 
         // plugin to validator, validator收到plugin打开新页面的信息之后, 给下一个relay发送信息
