@@ -5,7 +5,8 @@ import { getEncryptData } from '../contract/util/utils';
 import { PrismaClient } from '@prisma/client';
 import { writeFair, writeStoreData } from '../contract/eventListen/validatorListen';
 import { getStoreData } from '../contract/getContractInstance';
-
+//import { getPublicKey, getSig } from '../util/eccBlind'
+import eccBlind from './eccBlind';
 // applicant发送给relay的数据类型
 export type AppToRelayData = {
     from: null | string;
@@ -49,6 +50,9 @@ export function handleChainInit(socket: Socket, data: AppToRelayData) {
         sendBackData.chainIndex = data.chainIndex;
         socket.emit('verify correct', sendBackData);
     }
+    //发送公钥
+    const publicKey = eccBlind.getPublicKey();
+    logger.info(`生成的公钥：${publicKey.Px}, ${publicKey.Py}`);
 }
 
 interface NumInfo {
