@@ -10,7 +10,7 @@ const config: HardhatUserConfig = {
         hardhat: {
             mining: {
                 auto: false,
-                interval: [2000, 3000],
+                interval: 2000,
             },
             accounts: {
                 mnemonic: 'test test test test test test test test test test test junk',

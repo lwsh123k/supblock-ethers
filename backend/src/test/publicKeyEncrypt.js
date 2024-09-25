@@ -54,7 +54,7 @@ async function testObject() {
         '0x107be946709e41b7895eea9f2dacf998a0a9124acbb786f0fd1a826101581a07'
     );
     cipherText = await PublicKeyEncrypt.getEncryptData(publicKey, { a: 100 });
-    console.log(cipherText);
+    console.log(`pubkey: ${publicKey}, cipherText: ${cipherText}`);
     let text = await PublicKeyEncrypt.getDecryptData(
         '0x107be946709e41b7895eea9f2dacf998a0a9124acbb786f0fd1a826101581a07',
         cipherText

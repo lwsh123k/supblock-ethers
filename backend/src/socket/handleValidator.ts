@@ -1,12 +1,18 @@
 import { Socket } from 'socket.io';
 import { logger } from '../util/logger';
 import { verifyHashForward } from '../contract/util/verifyHash';
-import { getEncryptData } from '../contract/util/utils';
+import {
+    addHexAndMod,
+    getDecryptData,
+    getEncryptData,
+    getHash,
+    keccak256,
+} from '../contract/util/utils';
 import { PrismaClient } from '@prisma/client';
 import { writeFair, writeStoreData } from '../contract/eventListen/validatorListen';
 import { getStoreData } from '../contract/getContractInstance';
 
-// applicant发送给relay的数据类型
+// applicant to relay: data type
 export type AppToRelayData = {
     from: null | string;
     to: null | string;
@@ -15,7 +21,7 @@ export type AppToRelayData = {
     hf: null | string;
     hb: null | string;
     b: null | number;
-    c: null | number;
+    c: null | string;
     l: number;
     chainIndex: number;
     lastUserRelay?: boolean;
@@ -30,6 +36,8 @@ export type ValidatorSendBackInit = {
 };
 let app2ValidatorData = new Map<string, AppToRelayData>();
 let validatorSendBackData = new Map<string, ValidatorSendBackInit>();
+
+// validator listening applicant: chain init
 export function handleChainInit(socket: Socket, data: AppToRelayData) {
     logger.info('applicant to validator: initialization data');
     // verify data
@@ -41,11 +49,11 @@ export function handleChainInit(socket: Socket, data: AppToRelayData) {
     // if right, save and send back to applicant
     if (result) {
         if (from) app2ValidatorData.set(from, data); // save data from applicant
+        let token = '0x3333333333333333333333333333333333333333333333333333333333333333';
         let sendBackData: any = {};
         sendBackData.from = data.to!;
         sendBackData.to = data.from!;
-        sendBackData.tokenHash =
-            '0x3333333333333333333333333333333333333333333333333333333333333333'; // 暂时为固定值
+        sendBackData.tokenHash = keccak256(token); // 暂时为固定值
         sendBackData.chainIndex = data.chainIndex;
         socket.emit('verify correct', sendBackData);
     }
@@ -72,11 +80,11 @@ export type PreToNextRelayData = {
     hb: null | string;
     b: null | number;
     n: null | number;
-    t: null | string; // ??????????
+    t: null | string;
     l: number;
 };
 
-// validator收到plugin打开新页面的信息之后, 给下一个relay发送信息
+// validator listening plugin: new page opened, send to next relay
 const prisma = new PrismaClient();
 export async function handleValidator2Next(socket: Socket, data: NumInfo) {
     logger.info('plugin to validator: new page opened');
@@ -88,18 +96,7 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
     let nextRelayData: PreToNextRelayData;
     if (dataFromApplicant) {
         let { hf, hb, b } = dataFromApplicant;
-        nextRelayData = {
-            from: '0x863218e6ADad41bC3c2cb4463E26B625564ea3Ba',
-            to: null,
-            preAppTempAccount: applicant,
-            preRelayAccount: '0x863218e6ADad41bC3c2cb4463E26B625564ea3Ba',
-            hf,
-            hb,
-            b,
-            n: blindedFairIntNum,
-            t: '0x3333333333333333333333333333333333333333333333333333333333333333',
-            l: 0, // validator's relay index is 0
-        };
+        if (!hf || !hb || !b) throw new Error('hf or hb or b is is empty');
         try {
             // find index of relay real name address
             let nxetRelay = await prisma.supBlock.findUnique({
@@ -112,6 +109,21 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
                 },
             });
             if (nxetRelay === null) throw new Error('error when find public key using index');
+            // use the corresponding pubkey to encrypt t with adding c
+            let token = '0x3333333333333333333333333333333333333333333333333333333333333333';
+            let encryptedToken = await getEncryptData(nxetRelay.publicKey, token);
+            nextRelayData = {
+                from: '0x863218e6ADad41bC3c2cb4463E26B625564ea3Ba',
+                to: null,
+                preAppTempAccount: applicant,
+                preRelayAccount: '0x863218e6ADad41bC3c2cb4463E26B625564ea3Ba',
+                hf,
+                hb,
+                b,
+                n: blindedFairIntNum,
+                t: encryptedToken,
+                l: 0, // validator's relay index is 0
+            };
             nextRelayData.to = nxetRelay.address;
             let encryptedData = await getEncryptData(nxetRelay.publicKey, nextRelayData);
 
@@ -129,33 +141,49 @@ type CombinedData = {
     appToRelayData?: AppToRelayData;
     preToNextRelayData?: PreToNextRelayData;
 };
-let allAppToRelayData: AppToRelayData[] = [],
-    allPreToNextRelayData: PreToNextRelayData[] = [];
+let allAppToValidatorData: AppToRelayData[] = [],
+    allPreToValidatorData: PreToNextRelayData[] = [];
 export async function handleFinalData(socket: Socket, data: PreToNextRelayData | AppToRelayData) {
     // save data
     if (typeof data === 'object' && data !== null && 'appTempAccount' in data) {
-        allAppToRelayData.push(data);
-
+        allAppToValidatorData.push(data);
         console.log('receive final data from app: ', data);
     } else {
-        allPreToNextRelayData.push(data);
-        console.log('receive final data from app: ', data);
+        allPreToValidatorData.push(data);
+        console.log('receive final data from previous relay: ', data);
     }
     // verify data
-    let res = verifyData();
+    let res = await verifyData();
+    console.log('verify result: ', res);
+    // decode data
+    try {
+        if (res.verify === false) throw new Error('verify not pass');
+        if (res.token === '') throw new Error('token is empty');
+        // better way is reading from .env
+        let validatorPrivateKey =
+            '0x31f01500fb999fe79d19fe9f22d67aad4968a97fa15c1d22281c96357df5feaa';
+        let token = await getDecryptData(validatorPrivateKey, res.token);
+        let c = res.c;
+        let tokenAddc = addHexAndMod(token, c);
+        res.token = tokenAddc;
+    } catch (error) {
+        console.log(error);
+    }
+
     // send token t to applicant
     socket.emit('validator send token t', res); // for test
     if (res.verify) socket.emit('validator send token t', res);
 }
 
-function verifyData() {
-    let result: { verify: Boolean; token: string; chainId: number } = {
+async function verifyData() {
+    let result: { verify: Boolean; token: string; chainId: number; c: string } = {
         verify: false,
         token: '',
         chainId: -1,
+        c: '',
     };
-    for (let appToRelayData of allAppToRelayData) {
-        for (let preToNextRelayData of allPreToNextRelayData) {
+    for (let appToRelayData of allAppToValidatorData) {
+        for (let preToNextRelayData of allPreToValidatorData) {
             // 验证正向hash
             let hf = appToRelayData.hf,
                 preHf = preToNextRelayData.hf,
@@ -169,6 +197,7 @@ function verifyData() {
                 result.verify = true;
                 result.token = token;
                 result.chainId = appToRelayData.chainIndex;
+                result.c = appToRelayData.c!;
                 return result;
             }
         }

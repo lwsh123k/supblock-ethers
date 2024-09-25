@@ -14,7 +14,6 @@ export function record() {
     // 请求者hash上传
     let reqHashFilter = fairIntGen.filters.ReqHashUpload(); // 使用filter监听才有提示
     fairIntGen.on(reqHashFilter, async (from, to, infoHash, tA, tB, uploadTime, index, event) => {
-        console.log(infoHash);
         const transaction = await provider.getTransactionReceipt(event.transactionHash);
 
         let res = await prisma.uploadHash.create({
@@ -31,8 +30,7 @@ export function record() {
                 gas: transaction.gasUsed.toNumber(),
             },
         });
-        logger.info('applicant hash upload to database');
-        // console.log(res);
+        logger.info(`applicant hash (${infoHash}) upload to database`);
     });
     // 响应者hash上传
     let resHashFilter = fairIntGen.filters.ResHashUpload();
@@ -52,8 +50,7 @@ export function record() {
                 gas: transaction.gasUsed.toNumber(),
             },
         });
-        logger.info('relay hash upload to database');
-        // console.log(res);
+        logger.info(`relay hash (${infoHash}) upload to database`);
     });
 
     // 记录随机数上传事件
@@ -67,6 +64,7 @@ export function record() {
             [ni, tA, tB, ri]
         );
         let iscorrect = hash === numHash;
+        logger.info(`applicant try to upload num to database (num hash: ${hash})`);
         // 上传信息
         let res = await prisma.uploadNum.create({
             data: {
@@ -91,13 +89,14 @@ export function record() {
                 id: 'desc',
             },
         });
-        logger.info({ correctness: iscorrect }, 'applicant random number upload');
+        logger.info({ correctness: iscorrect }, 'applicant random number successfully upload');
         // console.log(iscorrect, other);
         // 如果都正确, 通知extension打开新页面;
         // 没办法知道请求者和响应者谁先上传, 所以都会调用sendPluginMessage, 然后在函数中判断只触发一次
         if (iscorrect && other?.uploadNum?.correctness)
             sendPluginMessage(from, to, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 100, hash);
     });
+
     // 响应者随机数上传
     let resInfoFilter = fairIntGen.filters.ResInfoUpload();
     fairIntGen.on(resInfoFilter, async (from, to, ni, ri, tB, numHash, uploadTime, tA, event) => {
@@ -108,6 +107,7 @@ export function record() {
             [ni, tA, tB, ri]
         );
         let iscorrect = hash === numHash;
+        logger.info(`relay try to upload num to database (num hash: ${hash})`);
         // 上传随机数
         let res = await prisma.uploadNum.create({
             data: {
@@ -133,7 +133,7 @@ export function record() {
             },
         });
 
-        logger.info({ correctness: iscorrect }, `relay random number upload`);
+        logger.info({ correctness: iscorrect }, `relay random number successfully upload`);
         // console.log(iscorrect, other);
         if (iscorrect && other?.uploadNum?.correctness)
             sendPluginMessage(
