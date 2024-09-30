@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 // 数据库自增索引id从1开始, 而文件索引从0开始: 1: applicant, 2-100: relay. validator不进行查询, 直接记录在前端页面中
 slqiteRouter.post('/getAccountInfo', async (req, res) => {
     let index = req.body.index;
-    console.log('searching public key with index ', index);
+    console.log('searching public key by index ', index);
     index++; // index in database
     try {
         let info = await prisma.supBlock.findUnique({
@@ -25,6 +25,25 @@ slqiteRouter.post('/getAccountInfo', async (req, res) => {
     } finally {
         // 实际开发过程中不用每次都关闭连接
         // await prisma.$disconnect();
+    }
+});
+
+slqiteRouter.post('/getPubkeyByAddress', async (req, res) => {
+    let address = req.body.address as string;
+    console.log('searching public key by address ', address);
+    try {
+        let info = await prisma.supBlock.findFirst({
+            where: {
+                address: address,
+            },
+            select: {
+                publicKey: true,
+                address: true,
+            },
+        });
+        res.send(info);
+    } catch {
+    } finally {
     }
 });
 

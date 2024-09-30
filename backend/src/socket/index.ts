@@ -6,14 +6,9 @@ import { DefaultEventsMap } from 'socket.io/dist/typed-events';
 import { logger } from '../util/logger';
 import { onlineUsers } from './users';
 import { useAuthMiddleware } from './middleware';
-import {
-    AppToRelayData,
-    handleChainInit,
-    handleFinalData,
-    handleValidator2Next,
-    PreToNextRelayData,
-} from './handleValidator';
+import { handleChainInit, handleFinalData, handleValidator2Next } from './handleValidator';
 import { AppBlindUpload, handleAppBlindUpload, hashToBMapping } from './handlePluginMessage';
+import { AppToRelayData, PreToNextRelayData } from './types';
 
 let io: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>;
 
