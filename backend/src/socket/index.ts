@@ -9,7 +9,8 @@ import { useAuthMiddleware } from './middleware';
 import { handleChainInit, handleFinalData, handleValidator2Next } from './handleValidator';
 import { AppBlindUpload, handleAppBlindUpload, hashToBMapping } from './handlePluginMessage';
 import { AppToRelayData, PreToNextRelayData } from './types';
-
+// For the client library
+import ioClient from 'socket.io-client';
 let io: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>;
 
 type AuthInfo = {
@@ -29,6 +30,13 @@ export function initSocket(
 
     // 认证中间件, socket登录需要user使用私钥加密字符串，服务器端通过公钥验证
     io.use(useAuthMiddleware);
+    const serverSocket = ioClient('http://localhost:3000', {
+        reconnectionAttempts: 5,
+        reconnectionDelay: 5000,
+        query: {
+            address: 'validator',
+        },
+    });
 
     io.on('connection', function (socket) {
         // 监听特定事件, 特定事件触发

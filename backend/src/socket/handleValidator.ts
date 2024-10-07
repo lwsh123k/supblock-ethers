@@ -12,6 +12,8 @@ import { PrismaClient } from '@prisma/client';
 import { writeFair, writeStoreData } from '../contract/eventListen/validatorListen';
 import { getStoreData } from '../contract/getContractInstance';
 import { AppToRelayData, PreToNextRelayData, ValidatorSendBackInit, NumInfo } from './types';
+import { DefaultEventsMap } from 'socket.io/dist/typed-events';
+import { onlineUsers } from './users';
 
 let validatorSendBackData = new Map<string, ValidatorSendBackInit>();
 
@@ -50,17 +52,17 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
         if (!hf || !hb || !b) throw new Error('hf or hb or b is is empty');
         try {
             // 此处applicant temp account为applicant real name account
-            let appTempAccount = dataFromApplicant.from;
-            let appTempAccountPubkey = await prisma.supBlock.findFirst({
-                where: {
-                    address: appTempAccount!,
-                },
-                select: {
-                    publicKey: true,
-                },
-            });
+            // let appTempAccount = dataFromApplicant.from;
+            // let appTempAccountPubkey = await prisma.supBlock.findFirst({
+            //     where: {
+            //         address: appTempAccount!,
+            //     },
+            //     select: {
+            //         publicKey: true,
+            //     },
+            // });
             let token = '0x3333333333333333333333333333333333333333333333333333333333333333';
-            let encryptedToken = await getEncryptData(appTempAccountPubkey?.publicKey!, token);
+            // let encryptedToken = await getEncryptData(appTempAccountPubkey?.publicKey!, token);
 
             // 给下一个relay发送信息, 查找对应的address
             let nxetRelay = await prisma.supBlock.findUnique({
@@ -82,7 +84,7 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
                 hb,
                 b,
                 n: blindedFairIntNum,
-                t: encryptedToken,
+                t: token,
                 l: 0, // validator's relay index is 0
             };
             nextRelayData.to = nxetRelay.address;
@@ -104,7 +106,10 @@ type CombinedData = {
 };
 let allAppToValidatorData: AppToRelayData[] = [],
     allPreToValidatorData: PreToNextRelayData[] = [];
-export async function handleFinalData(socket: Socket, data: PreToNextRelayData | AppToRelayData) {
+export async function handleFinalData(
+    userSocket: Socket,
+    data: PreToNextRelayData | AppToRelayData
+) {
     // save data
     if (typeof data === 'object' && data !== null && 'appTempAccount' in data) {
         allAppToValidatorData.push(data);
@@ -115,18 +120,25 @@ export async function handleFinalData(socket: Socket, data: PreToNextRelayData |
     }
     // verify data
     let verifyResult = await verifyData();
+    console.log(verifyResult);
     if (verifyResult === null) {
         console.log('verify not pass');
     } else {
+        let toSocketAddress = verifyResult.appToRelayData.appTempAccount;
         let res = {
             from: 'validator',
-            to: verifyResult.appToRelayData.appTempAccount,
+            to: toSocketAddress,
             verify: true,
             token: verifyResult.preToNextRelayData.t,
             chainId: verifyResult.appToRelayData.chainIndex,
         };
         console.log(res);
-        socket.emit('validator send token t', res);
+        if (toSocketAddress === null) {
+            console.log('to socket address is null');
+            return;
+        }
+        let toSocket = onlineUsers[toSocketAddress];
+        toSocket.emit('validator send token t', res);
     }
 }
 
