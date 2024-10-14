@@ -1,7 +1,7 @@
 import { Socket } from 'socket.io';
 import { logger } from '../util/logger';
 import { verifyHashForward } from '../contract/util/verifyHash';
-import { getEncryptData } from '../contract/util/utils';
+import { getEncryptData, getStringHash } from '../contract/util/utils';
 import { PrismaClient } from '@prisma/client';
 import { writeFair, writeStoreData } from '../contract/eventListen/validatorListen';
 import { getStoreData } from '../contract/getContractInstance';
@@ -9,7 +9,7 @@ import { getStoreData } from '../contract/getContractInstance';
 import eccBlind from './eccBlind';
 // applicant发送给relay的数据类型
 export type AppToRelayData = {
-    from: null | string;
+    from: null | string;  //from就是地址
     to: null | string;
     appTempAccount: null | string;
     r: null | string;
@@ -29,12 +29,25 @@ export type ValidatorSendBackInit = {
     chainIndex: string;
     tokenHash: string;
 };
+interface signedAddress {
+    sBlind: string;
+    t_hashAry: [string, string, string];
+}
+interface toApplicantSigned {
+    sBlind: string;
+    t_hash: string;
+}
+//声明一个map用于存储申请者applicant的地址和三个hash值的对应关系
+//let applicantAddressAry: string[];
+type hashValues = [string, string, string];
+const addressToHashMap: Map<string, hashValues> = new Map();
 let app2ValidatorData = new Map<string, AppToRelayData>();
 let validatorSendBackData = new Map<string, ValidatorSendBackInit>();
 export function handleChainInit(socket: Socket, data: AppToRelayData) {
     logger.info('applicant to validator: initialization data');
     // verify data
     let { from, to, r, hf, hb, b, c, chainIndex } = data;
+    //logger.info(`chainIndex:${chainIndex}`);
     if (from === null || r === null || hf === null)
         logger.error('applicant to validator: initialization data, data lack error');
     let result = verifyHashForward(from!, r!, hf!, null);
@@ -50,11 +63,46 @@ export function handleChainInit(socket: Socket, data: AppToRelayData) {
         sendBackData.chainIndex = data.chainIndex;
         socket.emit('verify correct', sendBackData);
     }
-    //发送公钥
-    const publicKey = eccBlind.getPublicKey();
-    logger.info(`生成的公钥：${publicKey.Px}, ${publicKey.Py}`);
-}
+    if (from !== null && !(addressToHashMap.has(from))) {
+        addressToHashMap.set(from, ['', '', '']);
+        //发送公钥
+        const publicKey = eccBlind.getPublicKey();
+        //logger.info(`generatedKey:${publicKey.Px}, ${publicKey.Py}`);
+        socket.emit('validator send pubKey', publicKey);
+        //logger.info('validator had send pubKey');
+        let blindedAdress: string = '';
+        socket.on('applicant send blindAds', (data: string) => {
+            blindedAdress = data;
+            //logger.info('validator had receive blindedAdress');
+            let { sBlind, tAry } = eccBlind.getSig(blindedAdress);
+            let t_hashAry: [string, string, string] = ['', '', ''];
+            //addressToHashMap.set(from, signedAds.t_hashAry)
+            //let t_hash = getStringHash(signedAds.t);
+            for (let i = 0; i < 3; i++) {
+                t_hashAry[i] = getStringHash(tAry[i]);
+            }
+            let signedAds: signedAddress = { sBlind, t_hashAry };
+            //因为from定义时可能为null，不检查一下会报错
+            if (from) {
+                addressToHashMap.set(from, signedAds.t_hashAry)
+            }
+            //addressToHashMap.set(from, signedAds.t_hashAry)
+            //logger.info(`signedAds.sBlind:${signedAds.sBlind},signedAds.t_hashAry:${signedAds.t_hashAry}`);
+            //logger.info(`t_hash:${t_hash}`);
+            let toApplicantSigned: toApplicantSigned = {
+                sBlind: signedAds.sBlind,
+                t_hash: signedAds.t_hashAry[chainIndex]
+            }
+            socket.emit('First init,Validator send signedData', toApplicantSigned);
+        })
+    } else if (from !== null && addressToHashMap.has(from)) {
+        const hashValues = addressToHashMap.get(from);
+        if (hashValues) {
+            socket.emit('Inited,Validator send t_hash', hashValues[chainIndex]);
+        }
 
+    }
+}
 interface NumInfo {
     from: string; // always is 'server'
     to: string; // always is 'plugin'

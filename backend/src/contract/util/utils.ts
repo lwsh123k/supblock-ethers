@@ -9,6 +9,33 @@ export function getHash(ni: number, ta: number, tb: number, ri: string) {
     );
     return hash;
 }
+//计算字符串的hash
+export function getStringHash(param: string) {
+    // 如果 param 以 "0x" 开头，去掉它进行后续处理
+    if (param.startsWith('0x')) {
+        param = param.slice(2);
+    }
+
+    // 检查长度是否为奇数，如果是则补一个 "0"
+    if ((param.length % 2) !== 0) {
+        param = '0' + param;
+    }
+
+    // 在前面重新添加 "0x" 前缀
+    param = '0x' + param;
+
+    const hash = ethers.utils.keccak256(param);
+    return hash;
+}
+//solidityKeccak256 在计算哈希值时，会根据你指定的类型（如 string）对输入值进行 ABI 编码。
+// export function getStringHash(param: string) {
+//     const hash = ethers.utils.solidityKeccak256(
+//         ['string'],  // 参数类型
+//         [param]      // 参数值
+//     );
+//     return hash;
+// }
+
 
 export function getRandom(tA: number, tB: number) {
     // 挑选随机数ni, 0 <= ni < 100. Math.random()方法返回一个0（包括）到1（不包括）之间的随机浮点数

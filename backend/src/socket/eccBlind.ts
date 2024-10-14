@@ -71,12 +71,19 @@ function getPublicKey(): { Rx: string, Ry: string, Px: string, Py: string } {
 }
 
 // 签名者签名
-function getSig(cBlinded: string): { sBlind: string, t: string } {
+function getSig(cBlinded: string): { sBlind: string, tAry: [string, string, string] } {
     const cBlinded_big = new BigInteger(cBlinded, 16, undefined);
     let sBlind = k.subtract(cBlinded_big.multiply(BigInteger.fromBuffer(privateKey)));
-    const t = generateRandomT(32);
-    sBlind = sBlind.add(t).mod(n);
-    return { sBlind: sBlind.toString(16), t: t.toString(16) };
+    let tAry: BigInteger[] = new Array(3);
+    //用于转换为string类型返回
+    let tStringAry: [string, string, string] = ['', '', ''];
+    for (let i = 0; i < 3; i++) {
+        tAry[i] = generateRandomT(32);
+        sBlind = sBlind.add(tAry[i]).mod(n);
+        tStringAry[i] = tAry[i].toString(16);
+    }
+
+    return { sBlind: sBlind.toString(16), tAry: tStringAry };
 }
 
 // 请求签名者去除盲化信息
