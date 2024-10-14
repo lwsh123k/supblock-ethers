@@ -85,3 +85,20 @@ export function addHexAndMod(hex1: string, hex2: string) {
     // 将结果转换回64位16进制字符串
     return result.toString(16).padStart(64, '0');
 }
+
+export function subHexAndMod(hex1: string, hex2: string) {
+    // format
+    hex1 = hex1.startsWith('0x') ? hex1 : '0x' + hex1;
+    hex2 = hex2.startsWith('0x') ? hex2 : '0x' + hex2;
+
+    // to bigint
+    const num1 = BigInt(hex1);
+    const num2 = BigInt(hex2);
+
+    // mod 2^256
+    const mod = BigInt(2) ** BigInt(256);
+    const result = (num1 + mod - num2) % mod;
+
+    // 将结果转换回64位16进制字符串
+    return result.toString(16).padStart(64, '0');
+}

@@ -30,7 +30,7 @@ export function handleChainInit(socket: Socket, data: AppToRelayData) {
     // if right, save and send back to applicant
     if (result) {
         if (from) app2ValidatorData.set(from, data); // save data from applicant
-        let token = '0x3333333333333333333333333333333333333333333333333333333333333333';
+        let token = '3333333333333333333333333333333333333333333333333333333333333333';
         let sendBackData: any = {};
         sendBackData.from = data.to!;
         sendBackData.to = data.from!;
@@ -61,7 +61,7 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
             //         publicKey: true,
             //     },
             // });
-            let token = '0x3333333333333333333333333333333333333333333333333333333333333333';
+            let token = '3333333333333333333333333333333333333333333333333333333333333333';
             // let encryptedToken = await getEncryptData(appTempAccountPubkey?.publicKey!, token);
 
             // 给下一个relay发送信息, 查找对应的address
@@ -110,16 +110,18 @@ export async function handleFinalData(
     userSocket: Socket,
     data: PreToNextRelayData | AppToRelayData
 ) {
-    // save data
+    // save data from applicant or previous relay
+    let verifyResult = undefined;
     if (typeof data === 'object' && data !== null && 'appTempAccount' in data) {
         allAppToValidatorData.push(data);
+        verifyResult = await verifyData(data, null); // verify data
         console.log('receive final data from app: ', data);
     } else {
         allPreToValidatorData.push(data);
+        verifyResult = await verifyData(null, data); // verify data
         console.log('receive final data from previous relay: ', data);
     }
-    // verify data
-    let verifyResult = await verifyData();
+
     console.log(verifyResult);
     if (verifyResult === null) {
         console.log('verify not pass');
@@ -142,9 +144,28 @@ export async function handleFinalData(
     }
 }
 
-async function verifyData() {
+async function verifyData(
+    applicantData: AppToRelayData | null,
+    PreRelayData: PreToNextRelayData | null
+) {
+    let isAppData = true;
+    if (PreRelayData != null) isAppData = false;
+
     for (let appToRelayData of allAppToValidatorData) {
+        // 验证applicant数据来源
+        if (
+            isAppData &&
+            (applicantData!.r != appToRelayData.r || applicantData!.hf != appToRelayData.hf)
+        )
+            continue;
         for (let preToNextRelayData of allPreToValidatorData) {
+            // 验证relay数据来源
+            if (
+                !isAppData &&
+                (PreRelayData!.hf != preToNextRelayData.hf ||
+                    PreRelayData!.t != preToNextRelayData.t)
+            )
+                continue;
             // 验证正向hash
             let hf = appToRelayData.hf,
                 preHf = preToNextRelayData.hf,
