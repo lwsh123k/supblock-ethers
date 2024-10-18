@@ -94,7 +94,12 @@ export function record() {
         // 如果都正确, 通知extension打开新页面;
         // 没办法知道请求者和响应者谁先上传, 所以都会调用sendPluginMessage, 然后在函数中判断只触发一次
         if (iscorrect && other?.uploadNum?.correctness)
-            sendPluginMessage(from, to, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 100, hash);
+            sendPluginMessage(
+                from,
+                to,
+                ((ni.toNumber() + Number(other?.uploadNum?.ni)) % 99) + 1,
+                hash
+            );
     });
 
     // 响应者随机数上传
@@ -139,7 +144,7 @@ export function record() {
             sendPluginMessage(
                 to,
                 from,
-                (ni.toNumber() + Number(other?.uploadNum?.ni)) % 100,
+                ((ni.toNumber() + Number(other?.uploadNum?.ni)) % 99) + 1,
                 other.infoHash
             );
     });
@@ -163,7 +168,7 @@ export function record() {
             },
         });
         logger.info({ ni: res.ni }, 'applicant random number reupload');
-        sendPluginMessage(from, to, ni.toNumber() % 100, originalHash);
+        sendPluginMessage(from, to, (ni.toNumber() % 99) + 1, originalHash);
     });
     // 响应者随机数上传
     let resReuploadNum = fairIntGen.filters.ResReuploadNum();
@@ -194,6 +199,6 @@ export function record() {
         });
 
         logger.info({ ni: res.ni }, 'relay random number reupload');
-        sendPluginMessage(to, from, ni.toNumber() % 100, findResult?.infoHash!);
+        sendPluginMessage(to, from, (ni.toNumber() % 99) + 1, findResult?.infoHash!);
     });
 }

@@ -22,12 +22,12 @@ export function sendPluginMessage(
     if (hasOpened.has(hashA)) return;
     hasOpened.set(hashA, true);
 
-    // fair integer = (blinding number + joint random number selection) % 100
+    // fair integer = (blinding number + joint random number selection) % 99 + 1
     let blindingNumber;
     if (!hashToBMapping.has(hashA)) {
         throw new Error('blinding number does not exist');
     } else blindingNumber = hashToBMapping.get(hashA)?.blindingNumber!;
-    let blindedFairIntNum = (fairIntegerNumber + blindingNumber) % 100;
+    let blindedFairIntNum = ((fairIntegerNumber + blindingNumber) % 99) + 1;
 
     // send to plugin
     let pluginSocket = onlineUsers['plugin'];

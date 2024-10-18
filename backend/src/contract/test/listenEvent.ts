@@ -34,7 +34,7 @@ class FairIntegerContract {
                 let fairIntegerNumber;
                 if (state === 1)
                     fairIntegerNumber =
-                        (latestNumResult[0].toNumber() + latestNumResult[1].toNumber()) % 100;
+                        ((latestNumResult[0].toNumber() + latestNumResult[1].toNumber()) % 99) + 1;
                 else if (state === 8) fairIntegerNumber = latestNumResult[0].toNumber();
                 else if (state === 9) fairIntegerNumber = latestNumResult[1].toNumber();
 
