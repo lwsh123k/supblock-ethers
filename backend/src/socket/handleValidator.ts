@@ -8,35 +8,58 @@ import {
     getHash,
     keccak256,
 } from '../contract/util/utils';
+import { getStringHash } from '../contract/util/utils';
 import { PrismaClient } from '@prisma/client';
 import { writeFair, writeStoreData } from '../contract/eventListen/validatorListen';
-import { getStoreData } from '../contract/getContractInstance';
-import { AppToRelayData, PreToNextRelayData, ValidatorSendBackInit, NumInfo } from './types';
+//import { getPublicKey, getSig } from '../util/eccBlind'
+import eccBlind, { addressToHashMap } from './eccBlind';
+import {
+    AppToRelayData,
+    PreToNextRelayData,
+    NumInfo,
+    ToApplicantSigned,
+    ValidatorSendBackSig,
+} from './types';
 import { DefaultEventsMap } from 'socket.io/dist/typed-events';
 import { onlineUsers } from './users';
 
-let validatorSendBackData = new Map<string, ValidatorSendBackInit>();
-
 // validator listening applicant: chain init
 let app2ValidatorData = new Map<string, AppToRelayData>();
+let validatorSendBackData = new Map<string, ValidatorSendBackSig>();
 export function handleChainInit(socket: Socket, data: AppToRelayData) {
     logger.info('applicant to validator: initialization data');
     // verify data
     let { from, to, r, hf, hb, b, c, chainIndex } = data;
-    if (from === null || r === null || hf === null)
+    if (!from || !r || !hf) {
         logger.error('applicant to validator: initialization data, data lack error');
+        return;
+    }
     let result = verifyHashForward(from!, r!, hf!, null);
 
     // if right, save and send back to applicant
     if (result) {
-        if (from) app2ValidatorData.set(from, data); // save data from applicant
-        let token = '3333333333333333333333333333333333333333333333333333333333333333';
-        let sendBackData: any = {};
-        sendBackData.from = data.to!;
-        sendBackData.to = data.from!;
-        sendBackData.tokenHash = keccak256(token); // 暂时为固定值
-        sendBackData.chainIndex = data.chainIndex;
-        socket.emit('verify correct', sendBackData);
+        app2ValidatorData.set(from, data);
+        // whether it's signed or not
+        if (!addressToHashMap.has(from)) {
+            const publicKey = eccBlind.getPublicKey();
+            //logger.info(`generatedKey:${publicKey.Px}, ${publicKey.Py}`);
+            socket.emit('validator send pubkey', publicKey);
+            logger.info('validator has sent pubkey');
+        } else if (addressToHashMap.has(from)) {
+            const value = addressToHashMap.get(from);
+            if (!value) {
+                logger.error(`token hash not found for address ${from}`);
+                return;
+            }
+            let sendBackData: Partial<ValidatorSendBackSig> = {};
+            sendBackData.from = data.to!;
+            sendBackData.to = data.from!;
+            sendBackData.tokenHash = value.t_hashAry;
+            sendBackData.sBlind = value.sBlind;
+            sendBackData.chainIndex = data.chainIndex;
+            // socket.emit('hash forward verify correct', sendBackData);
+            socket.emit('validator send sig and hash', sendBackData);
+        }
     }
 }
 

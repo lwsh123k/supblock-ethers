@@ -8,9 +8,10 @@ import { onlineUsers } from './users';
 import { useAuthMiddleware } from './middleware';
 import { handleChainInit, handleFinalData, handleValidator2Next } from './handleValidator';
 import { AppBlindUpload, handleAppBlindUpload, hashToBMapping } from './handlePluginMessage';
-import { AppToRelayData, PreToNextRelayData } from './types';
+import { AppBlindedAddress, AppToRelayData, PreToNextRelayData } from './types';
 // For the client library
 import ioClient from 'socket.io-client';
+import { signBlindedAddress } from './eccBlind';
 let io: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>;
 
 type AuthInfo = {
@@ -50,6 +51,7 @@ export function initSocket(
             'blinding number',
             'applicant to validator: final data',
             'relay to validator: final data',
+            ' applicant send blinded address',
         ];
         socket.onAny((eventName, data) => {
             if (excludeEvent.includes(eventName)) return;
@@ -66,9 +68,13 @@ export function initSocket(
             handleAppBlindUpload(data);
         });
 
-        // app to relay: chain initialization
+        // chain initialization 第二三次从"applicant to validator: initialization data"获取t
         socket.on('applicant to validator: initialization data', (data) => {
             handleChainInit(socket, data);
+        });
+        // chain initialization 申请者第一次从"applicant send blinded address"获取t
+        socket.on('applicant send blinded address', async (data: AppBlindedAddress) => {
+            await signBlindedAddress(socket, data);
         });
 
         // plugin to validator, validator收到plugin打开新页面的信息之后, 给下一个relay发送信息

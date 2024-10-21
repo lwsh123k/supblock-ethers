@@ -23,9 +23,9 @@ export type PreToNextRelayData = {
     l: number;
 };
 
-// applicant to relay: data type
+// applicant to relay
 export type AppToRelayData = {
-    from: null | string;
+    from: null | string; // 申请者地址
     to: null | string;
     appTempAccount: null | string;
     r: null | string;
@@ -33,15 +33,35 @@ export type AppToRelayData = {
     hb: null | string;
     b: null | number;
     c: null | string;
-    l: number;
+    l: number; // 数据序号
     chainIndex: number;
     lastUserRelay?: boolean;
 };
 
-// validator send back
-export type ValidatorSendBackInit = {
+// validator send back: 申请者发送init, validator回送token hash
+export type ValidatorSendBackSig = {
     from: string;
     to: string;
-    chainIndex: string;
-    tokenHash: string;
+    chainIndex: number; // 可以不用, 一次将所有hash发送回去
+    sBlind: string;
+    tokenHash: [string, string, string];
+};
+
+export interface ToApplicantSigned {
+    chainId: number;
+    sBlind: string;
+    t_hash: string;
+}
+
+export interface SignedAddress {
+    sBlind: string;
+    t_hashAry: [string, string, string];
+}
+
+// 申请者将盲化后的信息发给validator签名
+export type AppBlindedAddress = {
+    from: string;
+    to: string;
+    chainId: number; // 可以不用, 一次将所有hash发送回去
+    blindedAddress: string;
 };
