@@ -15,6 +15,12 @@ contract StoreData {
 		bool lastRelay
 	);
 	event Pre2NextEvent(address indexed from, address indexed relay, bytes data, uint dataIndex);
+	event RelayResEvidenceEvent(
+		address indexed relayRealAccount,
+		address indexed appTempAccount,
+		bytes data,
+		bytes32 resEvidence
+	);
 
 	// 存储公钥
 	function setPublicKey(bytes memory publicKey) public {
@@ -60,5 +66,15 @@ contract StoreData {
 	) public view returns (bytes memory) {
 		require(index <= relayData[sender][receiver].length, "invalid index");
 		return relayData[sender][receiver][index];
+	}
+
+	// relay给applicant的回复, relayRealAccount -> appTempAccount
+	// 如果只上链hash, 会不会将hash上链, 但是实际上并没有将消息发回给applicant
+	function setTempAccountHash(
+		address appTempAccount,
+		bytes memory encryptedData,
+		bytes32 resEvidence
+	) public {
+		emit RelayResEvidenceEvent(msg.sender, appTempAccount, encryptedData, resEvidence);
 	}
 }

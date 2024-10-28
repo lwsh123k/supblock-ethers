@@ -6,7 +6,12 @@ import { DefaultEventsMap } from 'socket.io/dist/typed-events';
 import { logger } from '../util/logger';
 import { onlineUsers } from './users';
 import { useAuthMiddleware } from './middleware';
-import { handleChainInit, handleFinalData, handleValidator2Next } from './handleValidator';
+import {
+    handleChainConfirmation,
+    handleChainInit,
+    handleFinalData,
+    handleValidator2Next,
+} from './handleValidator';
 import { AppBlindUpload, handleAppBlindUpload, hashToBMapping } from './handlePluginMessage';
 import { AppBlindedAddress, AppToRelayData, PreToNextRelayData } from './types';
 // For the client library
@@ -89,6 +94,11 @@ export function initSocket(
         // relay send final data to validator
         socket.on('relay to validator: final data', async (data: PreToNextRelayData) => {
             await handleFinalData(socket, data);
+        });
+
+        // final confirmation
+        socket.on('applicant to validator: chain confirmation', async (data: AppToRelayData) => {
+            await handleChainConfirmation(socket, data);
         });
     });
 }

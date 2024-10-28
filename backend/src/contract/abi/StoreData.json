@@ -59,6 +59,33 @@
     ]
   },
   {
+    "type": "event",
+    "anonymous": false,
+    "name": "RelayResEvidenceEvent",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "relayRealAccount",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "appTempAccount",
+        "indexed": true
+      },
+      {
+        "type": "bytes",
+        "name": "data",
+        "indexed": false
+      },
+      {
+        "type": "bytes32",
+        "name": "resEvidence",
+        "indexed": false
+      }
+    ]
+  },
+  {
     "type": "function",
     "name": "getData",
     "constant": true,
@@ -189,6 +216,27 @@
       {
         "type": "bytes",
         "name": "publicKey"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "setTempAccountHash",
+    "constant": false,
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address",
+        "name": "appTempAccount"
+      },
+      {
+        "type": "bytes",
+        "name": "encryptedData"
+      },
+      {
+        "type": "bytes32",
+        "name": "resEvidence"
       }
     ],
     "outputs": []

@@ -1,6 +1,6 @@
 import { Socket } from 'socket.io';
 import { logger } from '../util/logger';
-import { verifyHashForward } from '../contract/util/verifyHash';
+import { verifyHashBackward, verifyHashForward } from '../contract/util/verifyHash';
 import {
     addHexAndMod,
     getDecryptData,
@@ -205,4 +205,25 @@ async function verifyData(
     }
 
     return null;
+}
+
+// hash(l+2) = hash(A(l+2), r(l+2))
+export async function handleChainConfirmation(userSocket: Socket, data: AppToRelayData) {
+    let currentHash = data.hb;
+    if (!currentHash) {
+        userSocket.emit('chain confirmation result', { result: false });
+        return;
+    }
+    for (let app2ValidatorData of allAppToValidatorData) {
+        let appTempAccount = app2ValidatorData.appTempAccount,
+            r = app2ValidatorData.r;
+        if (!appTempAccount || !r) continue;
+        let res = verifyHashBackward(appTempAccount, r, currentHash, null);
+        if (res) {
+            userSocket.emit('chain confirmation result', { result: true });
+            return;
+        }
+    }
+
+    userSocket.emit('chain confirmation result', { result: false });
 }
