@@ -142,12 +142,7 @@ export async function handleReqInfoUpload(
     // 如果都正确, 通知extension打开新页面;
     // 没办法知道请求者和响应者谁先上传, 所以都会调用sendPluginMessage, 然后在函数中判断只触发一次
     if (iscorrect && other?.uploadNum?.correctness)
-        sendPluginMessage(
-            from,
-            to,
-            ((ni.toNumber() + Number(other?.uploadNum?.ni)) % 99) + 1,
-            hash
-        );
+        sendPluginMessage(from, to, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 99, hash);
 }
 
 // res num
@@ -211,7 +206,7 @@ export async function handleResInfoUpload(
         sendPluginMessage(
             to,
             from,
-            ((ni.toNumber() + Number(other?.uploadNum?.ni)) % 99) + 1,
+            (ni.toNumber() + Number(other?.uploadNum?.ni)) % 99,
             other.infoHash
         );
 }
@@ -251,7 +246,7 @@ export async function handleResReuploadNum(
         },
     });
     logger.info({ ni: res.ni }, 'applicant random number reupload');
-    sendPluginMessage(from, to, (ni.toNumber() % 99) + 1, originalHash);
+    sendPluginMessage(from, to, ni.toNumber() % 99, originalHash);
 }
 
 // res reupload
@@ -300,5 +295,5 @@ export async function handleReqReuploadNum(
     });
 
     logger.info({ ni: res.ni }, 'relay random number reupload');
-    sendPluginMessage(to, from, (ni.toNumber() % 99) + 1, findResult?.infoHash!);
+    sendPluginMessage(to, from, ni.toNumber() % 99, findResult?.infoHash!);
 }

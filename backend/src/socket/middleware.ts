@@ -1,5 +1,5 @@
 import { Socket } from 'socket.io';
-import { onlineUsers } from './users';
+import { onlineUsers } from './usersData';
 import { ethers } from 'ethers';
 import { authString } from '../routes/authentication';
 import { logger } from '../util/logger';

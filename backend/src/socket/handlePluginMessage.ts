@@ -1,5 +1,5 @@
 import { logger } from '../util/logger';
-import { onlineUsers } from './users';
+import { onlineUsers } from './usersData';
 
 // 存储r => { applicant temp address, blindlingNumber } 的映射
 export const hashToBMapping = new Map<

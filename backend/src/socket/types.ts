@@ -23,7 +23,7 @@ export type PreToNextRelayData = {
     l: number;
 };
 
-// applicant to relay
+// 链初始化时, applicant给relay发送消息
 export type AppToRelayData = {
     from: null | string; // 申请者地址
     to: null | string;
@@ -45,6 +45,14 @@ export type ValidatorSendBackSig = {
     chainIndex: number; // 可以不用, 一次将所有hash发送回去
     sBlind: string;
     tokenHash: [string, string, string];
+    point: EccPoint;
+};
+
+export type EccPoint = {
+    Rx: string;
+    Ry: string;
+    Px: string;
+    Py: string;
 };
 
 export interface ToApplicantSigned {
@@ -53,9 +61,11 @@ export interface ToApplicantSigned {
     t_hash: string;
 }
 
+// validator的签名
 export interface SignedAddress {
     sBlind: string;
     t_hashAry: [string, string, string];
+    t_array: [string, string, string];
 }
 
 // 申请者将盲化后的信息发给validator签名
@@ -65,3 +75,5 @@ export type AppBlindedAddress = {
     chainId: number; // 可以不用, 一次将所有hash发送回去
     blindedAddress: string;
 };
+
+export type hashValues = [string, string, string];

@@ -12,7 +12,7 @@ import { getStringHash } from '../contract/util/utils';
 import { PrismaClient } from '@prisma/client';
 import { writeFair, writeStoreData } from '../contract/eventListen/validatorListen';
 //import { getPublicKey, getSig } from '../util/eccBlind'
-import eccBlind, { addressToHashMap } from './eccBlind';
+import eccBlind from './eccBlind';
 import {
     AppToRelayData,
     PreToNextRelayData,
@@ -21,7 +21,7 @@ import {
     ValidatorSendBackSig,
 } from './types';
 import { DefaultEventsMap } from 'socket.io/dist/typed-events';
-import { onlineUsers } from './users';
+import { onlineUsers, userSig } from './usersData';
 
 // validator listening applicant: chain init
 let app2ValidatorData = new Map<string, AppToRelayData>();
@@ -40,26 +40,32 @@ export function handleChainInit(socket: Socket, data: AppToRelayData) {
     if (result) {
         app2ValidatorData.set(from, data);
         // whether it's signed or not
-        if (!addressToHashMap.has(from)) {
-            const publicKey = eccBlind.getPublicKey();
+        if (!userSig.has(from)) {
+            let eccPoint = eccBlind.getPublicKey();
             //logger.info(`generatedKey:${publicKey.Px}, ${publicKey.Py}`);
-            socket.emit('validator send pubkey', publicKey);
-            logger.info('validator has sent pubkey');
-        } else if (addressToHashMap.has(from)) {
-            const value = addressToHashMap.get(from);
+            socket.emit('validator send pubkey', eccPoint);
+            logger.info('sig not exists, validator has sent pubkey');
+        } else if (userSig.has(from)) {
+            const value = userSig.get(from);
             if (!value) {
                 logger.error(`token hash not found for address ${from}`);
                 return;
             }
+            let eccPoint = eccBlind.getPublicKey();
             let sendBackData: Partial<ValidatorSendBackSig> = {};
             sendBackData.from = data.to!;
             sendBackData.to = data.from!;
             sendBackData.tokenHash = value.t_hashAry;
             sendBackData.sBlind = value.sBlind;
             sendBackData.chainIndex = data.chainIndex;
+            sendBackData.point = eccPoint;
+            console.log(sendBackData);
             // socket.emit('hash forward verify correct', sendBackData);
             socket.emit('validator send sig and hash', sendBackData);
+            logger.info('sig exists, validator has sig and hash');
         }
+    } else {
+        logger.info('hash forward is not correct');
     }
 }
 

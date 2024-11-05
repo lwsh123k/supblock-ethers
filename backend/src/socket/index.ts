@@ -4,7 +4,7 @@ import { authString } from '../routes/authentication';
 import { ethers } from 'ethers';
 import { DefaultEventsMap } from 'socket.io/dist/typed-events';
 import { logger } from '../util/logger';
-import { onlineUsers } from './users';
+import { onlineUsers } from './usersData';
 import { useAuthMiddleware } from './middleware';
 import {
     handleChainConfirmation,

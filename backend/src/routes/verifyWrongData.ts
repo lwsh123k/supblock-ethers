@@ -1,9 +1,9 @@
 import express from 'express';
 import { AppToRelayData } from '../socket/types';
-import { keccak256, subHexAndMod } from '../contract/util/utils';
+import { addHexAndMod, keccak256, subHexAndMod } from '../contract/util/utils';
 import { PrismaClient } from '@prisma/client';
 import { verifyHashForward } from '../contract/util/verifyHash';
-import { addressToHashMap } from '../socket/eccBlind';
+import { userSig } from '../socket/usersData';
 
 // app received data
 export type AppReceivedData = {
@@ -22,7 +22,7 @@ const prisma = new PrismaClient();
 verifyWrongData.post('/verifyWrongData', async (req, res) => {
     if (!req.body.wrongData) return;
     let data = req.body.wrongData as wrongDataType[];
-    // console.log(data);
+    console.log(data);
 
     let chainLength = 3,
         token = data[chainLength + 1].PAReceive.encrypedToken;
@@ -31,21 +31,25 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
         return;
     }
 
-    // 计算应得的token, 与接受的错误的比较,找到哪一步出了问题
+    // 计算应得的token, 与接收的错误的比较,找到哪一步出了问题
     let appRealAccount = data[0].PA.from,
         chainId = data[0].PA.chainIndex;
     if (!appRealAccount || !chainId) {
-        console.log('appRealAccount or chainId is empty');
+        console.log(
+            `appRealAccount or chainId is empty, app realname account: ${appRealAccount}, chain id: ${chainId}`
+        );
         res.json({ result: false });
         return;
     }
-    let savedSig = addressToHashMap.get(appRealAccount);
+    let savedSig = userSig.get(appRealAccount);
     if (!savedSig) {
         console.log('can not find sig of applicant');
         res.json({ result: false });
         return;
     }
-    let expectedToken = [savedSig.t_hashAry[chainId]];
+
+    // 使用真正的token计算, token + c
+    let expectedToken = [savedSig.t_array[chainId]];
     for (let i = 1; i <= chainLength; i++) {
         let c = data[i].PA.c;
         if (!c) {
@@ -53,13 +57,14 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
             res.json({ result: false });
             return;
         }
-        token = subHexAndMod(expectedToken[i - 1], c);
+        token = addHexAndMod(expectedToken[i - 1], c);
         expectedToken.push(token);
     }
-    //
-    // console.log('encrypedToken: ', token);
+    console.log(`real token add c: ${expectedToken}`);
+
+    // 使用接收到的token计算, token - c
     let preHash = null,
-        calculatedTokenList = [];
+        calculatedTokenList = [token];
     for (let i = chainLength; i >= 1; i--) {
         console.log(`token: ${token}, i: ${i}, typeof token: ${typeof token}`);
         let c = data[i].PA.c,
@@ -95,10 +100,35 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
         preHash = hf;
         // 减去c
         token = subHexAndMod(token, c);
-        if (token !== expectedToken[i]) {
+        calculatedTokenList.unshift(token);
+        if (token !== expectedToken[i - 1]) {
             console.log(`wrong relay index ${0}`);
             // 通过链上hash找到relay的回应
         }
+    }
+
+    // 找到错误的relay
+    let wrongRelayIndex = -1;
+    for (let i = 1; i <= chainLength; i++) {
+        if (expectedToken[i] != calculatedTokenList[i]) {
+            wrongRelayIndex = i - 1; // 当前错误是之前导致的
+            break;
+        }
+    }
+    if (wrongRelayIndex != -1) {
+        let info = await prisma.supBlock.findUnique({
+            where: {
+                id: wrongRelayIndex,
+            },
+            select: {
+                publicKey: true,
+                address: true,
+            },
+        });
+        let relayRealnameAddress = info?.address;
+        console.log(
+            `wrong relay index: ${wrongRelayIndex}, wrong relay address: ${relayRealnameAddress}`
+        );
     }
 
     // result

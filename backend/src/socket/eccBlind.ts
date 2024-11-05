@@ -3,9 +3,16 @@ import BigInteger from 'bigi';
 import ecurve, { Point } from 'ecurve';
 import createKeccakHash from 'keccak';
 import { Buffer } from 'buffer';
-import { AppBlindedAddress, SignedAddress, ToApplicantSigned, ValidatorSendBackSig } from './types';
+import {
+    AppBlindedAddress,
+    EccPoint,
+    SignedAddress,
+    ToApplicantSigned,
+    ValidatorSendBackSig,
+} from './types';
 import { Socket } from 'socket.io';
 import { logger } from '../util/logger';
+import { userSig } from './usersData';
 
 // 生成size字节的随机数
 function random(size: number): BigInteger {
@@ -64,9 +71,12 @@ function generateRandomT(size: number): BigInteger {
 }
 
 // 发送自己的公钥
-let k: BigInteger;
-function getPublicKey(): { Rx: string; Ry: string; Px: string; Py: string } {
-    k = random(32);
+let k: BigInteger = BigInteger.fromHex(
+    'c57df61b2a646edc507fa436c94cb1882d83ca18ee479a9277691418b2ffa693'
+); // 暂时为固定值, 只有一个user
+function getPublicKey(): EccPoint {
+    // k = random(32);
+    // console.log(k.toHex());
     R = G.multiply(k);
     return {
         Rx: R.affineX.toString(16),
@@ -118,9 +128,6 @@ function verifySig(m: string, c: string, s: string, t: string): { result: boolea
     }
 }
 
-export type hashValues = [string, string, string];
-export const addressToHashMap: Map<string, SignedAddress> = new Map();
-export const chainNumber = 3;
 export function signBlindedAddress(socket: Socket, data: AppBlindedAddress) {
     logger.info('applicant to validator: get sig of blinded address');
     let { blindedAddress, chainId, from, to } = data;
@@ -137,22 +144,24 @@ export function signBlindedAddress(socket: Socket, data: AppBlindedAddress) {
     for (let i = 0; i < 3; i++) {
         t_hashAry[i] = keccak256(tAry[i]);
     }
-    let signedAddress: SignedAddress = { sBlind, t_hashAry };
+    let signedAddress: SignedAddress = { sBlind, t_hashAry, t_array: tAry };
     //因为from定义时可能为null，不检查一下会报错
     if (!from) {
         logger.info('from is null or undefined');
         return;
     }
-    addressToHashMap.set(from, signedAddress);
+    userSig.set(from, signedAddress);
     //addressToHashMap.set(from, signedAds.t_hashAry)
     //logger.info(`signedAds.sBlind:${signedAds.sBlind},signedAds.t_hashAry:${signedAds.t_hashAry}`);
     //logger.info(`t_hash:${t_hash}`);
+    let eccPoint = getPublicKey();
     let sendBackData: Partial<ValidatorSendBackSig> = {};
     sendBackData.from = data.to!;
     sendBackData.to = data.from!;
     sendBackData.tokenHash = signedAddress.t_hashAry;
     sendBackData.sBlind = signedAddress.sBlind;
     sendBackData.chainIndex = data.chainId;
+    sendBackData.point = eccPoint;
     // socket.emit('hash forward verify correct', sendBackData);
     socket.emit('validator send sig and hash', sendBackData);
 }
