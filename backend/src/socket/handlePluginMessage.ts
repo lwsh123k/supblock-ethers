@@ -1,10 +1,10 @@
 import { logger } from '../util/logger';
 import { onlineUsers } from './usersData';
 
-// 存储r => { applicant temp address, blindlingNumber } 的映射
+// 存储hash => { applicant temp address, blindlingNumber } 的映射
 export const hashToBMapping = new Map<
     string,
-    { blindingNumber: number; tempAccount: string; relayAccount: string }
+    { blindingNumber: number; tempAccount: string; relayAccount: string; chainId: number }
 >();
 
 // 将双方上传随机数完成的消息发送给插件
@@ -50,11 +50,12 @@ export function sendPluginMessage(
 }
 
 export function handleAppBlindUpload(data: AppBlindUpload) {
-    let { blindingNumber, tempAccount, relayAccount, hash } = data;
+    let { blindingNumber, tempAccount, relayAccount, hash, chainId } = data;
     hashToBMapping.set(hash, {
         blindingNumber,
         tempAccount,
         relayAccount,
+        chainId,
     });
     console.log(typeof hash);
     console.log(hashToBMapping.get(hash));
@@ -66,4 +67,5 @@ export type AppBlindUpload = {
     tempAccount: string;
     relayAccount: string;
     hash: string;
+    chainId: number;
 };

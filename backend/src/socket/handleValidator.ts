@@ -21,10 +21,10 @@ import {
     ValidatorSendBackSig,
 } from './types';
 import { DefaultEventsMap } from 'socket.io/dist/typed-events';
-import { onlineUsers, userSig } from './usersData';
+import { addApp2ValidatorData, app2ValidatorData, onlineUsers, userSig } from './usersData';
+import { hashToBMapping } from './handlePluginMessage';
 
-// validator listening applicant: chain init
-let app2ValidatorData = new Map<string, AppToRelayData>();
+// 申请忙签名. validator listening applicant: chain init
 let validatorSendBackData = new Map<string, ValidatorSendBackSig>();
 export function handleChainInit(socket: Socket, data: AppToRelayData) {
     logger.info('applicant to validator: initialization data');
@@ -38,7 +38,7 @@ export function handleChainInit(socket: Socket, data: AppToRelayData) {
 
     // if right, save and send back to applicant
     if (result) {
-        app2ValidatorData.set(from, data);
+        addApp2ValidatorData(from, data, chainIndex);
         // whether it's signed or not
         if (!userSig.has(from)) {
             let eccPoint = eccBlind.getPublicKey();
@@ -69,16 +69,45 @@ export function handleChainInit(socket: Socket, data: AppToRelayData) {
     }
 }
 
-// validator listening plugin: new page opened, send to next relay
+// validaor给他之后的第一个relay发送消息. validator listening plugin: new page opened, send to next relay
 const prisma = new PrismaClient();
 export async function handleValidator2Next(socket: Socket, data: NumInfo) {
-    logger.info('plugin to validator: new page opened');
+    logger.info(
+        `hash of applicant: ${data.hashOfApplicant}`,
+        'plugin to validator: new page opened'
+    );
     // select data and encrypt data
-    let { from, to, applicant, relay, blindedFairIntNum } = data;
-    let dataFromApplicant = app2ValidatorData.get(applicant);
+    let { from, to, applicant, relay, blindedFairIntNum, hashOfApplicant } = data;
+
+    // 区分哪一条链
+    let bAndl = hashToBMapping.get(hashOfApplicant);
+    if (!bAndl) {
+        logger.error(`hash of applicant: ${hashOfApplicant}, can not found bAndl`);
+        return;
+    }
+    let chainId = bAndl.chainId;
+    let dataFromApplicantArray = app2ValidatorData.get(applicant);
+    if (!dataFromApplicantArray) {
+        logger.error(
+            `applicant address: ${applicant}, chain id: ${chainId}, can not found data from applicant array`
+        );
+        return;
+    }
+    let dataFromApplicant = dataFromApplicantArray[chainId];
+    let token = userSig.get(applicant)?.t_array[chainId];
+    if (!token) {
+        logger.error(
+            `applicant address: ${applicant}, chain id: ${chainId}, can not found token in usersig`
+        );
+        return;
+    }
+
     if (dataFromApplicant) {
         let { hf, hb, b } = dataFromApplicant;
-        if (!hf || !hb || !b) throw new Error('hf or hb or b is is empty');
+        if (!hf || !hb || !b) {
+            logger.error(dataFromApplicant, 'hf or hb or b is is empty');
+            throw new Error('hf or hb or b is is empty');
+        }
         try {
             // 此处applicant temp account为applicant real name account
             // let appTempAccount = dataFromApplicant.from;
@@ -90,7 +119,7 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
             //         publicKey: true,
             //     },
             // });
-            let token = '3333333333333333333333333333333333333333333333333333333333333333';
+            // let token = '3333333333333333333333333333333333333333333333333333333333333333';
             // let encryptedToken = await getEncryptData(appTempAccountPubkey?.publicKey!, token);
 
             // 给下一个relay发送信息, 查找对应的address
@@ -113,14 +142,16 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
                 hb,
                 b,
                 n: blindedFairIntNum,
-                t: token,
+                t: token!,
                 l: 0, // validator's relay index is 0
             };
             nextRelayData.to = nxetRelay.address;
+            logger.info(nextRelayData, 'validator sends token to first relay');
             let encryptedData = await getEncryptData(nxetRelay.publicKey, nextRelayData);
 
             // upload to blockchain
             await writeStoreData.setPre2Next(nxetRelay.address, encryptedData);
+            logger.info('validator sends token to first relay: data upload success');
         } catch (error) {
             logger.error(error, 'error when validator upload data to next relay');
         }
@@ -133,8 +164,9 @@ type CombinedData = {
     appToRelayData?: AppToRelayData;
     preToNextRelayData?: PreToNextRelayData;
 };
-let allAppToValidatorData: AppToRelayData[] = [],
-    allPreToValidatorData: PreToNextRelayData[] = [];
+// 存储final data(app和relay最后一次将数据发送给validator)
+let finalAllAppToValidatorData: AppToRelayData[] = [],
+    finalAllPreToValidatorData: PreToNextRelayData[] = [];
 export async function handleFinalData(
     userSocket: Socket,
     data: PreToNextRelayData | AppToRelayData
@@ -142,11 +174,11 @@ export async function handleFinalData(
     // save data from applicant or previous relay
     let verifyResult = undefined;
     if (typeof data === 'object' && data !== null && 'appTempAccount' in data) {
-        allAppToValidatorData.push(data);
+        finalAllAppToValidatorData.push(data);
         verifyResult = await verifyData(data, null); // verify data
         console.log('receive final data from app: ', data);
     } else {
-        allPreToValidatorData.push(data);
+        finalAllPreToValidatorData.push(data);
         verifyResult = await verifyData(null, data); // verify data
         console.log('receive final data from previous relay: ', data);
     }
@@ -180,14 +212,14 @@ async function verifyData(
     let isAppData = true;
     if (PreRelayData != null) isAppData = false;
 
-    for (let appToRelayData of allAppToValidatorData) {
+    for (let appToRelayData of finalAllAppToValidatorData) {
         // 验证applicant数据来源
         if (
             isAppData &&
             (applicantData!.r != appToRelayData.r || applicantData!.hf != appToRelayData.hf)
         )
             continue;
-        for (let preToNextRelayData of allPreToValidatorData) {
+        for (let preToNextRelayData of finalAllPreToValidatorData) {
             // 验证relay数据来源
             if (
                 !isAppData &&
@@ -220,7 +252,7 @@ export async function handleChainConfirmation(userSocket: Socket, data: AppToRel
         userSocket.emit('chain confirmation result', { result: false });
         return;
     }
-    for (let app2ValidatorData of allAppToValidatorData) {
+    for (let app2ValidatorData of finalAllAppToValidatorData) {
         let appTempAccount = app2ValidatorData.appTempAccount,
             r = app2ValidatorData.r;
         if (!appTempAccount || !r) continue;

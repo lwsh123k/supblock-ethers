@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import EthCrypto, { cipher } from 'eth-crypto';
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex as toHex } from '@noble/hashes/utils';
+import { keccak256 as keccak256Hash } from 'js-sha3';
 
 // 计算hash, 使用keccak256, 保证数据类型与solidity中的数据类型一致
 export function getHash(ni: number, ta: number, tb: number, ri: string) {
@@ -19,7 +20,7 @@ export function getStringHash(param: string) {
     }
 
     // 检查长度是否为奇数，如果是则补一个 "0"
-    if ((param.length % 2) !== 0) {
+    if (param.length % 2 !== 0) {
         param = '0' + param;
     }
 
@@ -37,7 +38,6 @@ export function getStringHash(param: string) {
 //     );
 //     return hash;
 // }
-
 
 export function getRandom(tA: number, tB: number) {
     // 挑选随机数ni, 0 <= ni < 100. Math.random()方法返回一个0（包括）到1（不包括）之间的随机浮点数
@@ -89,6 +89,13 @@ export async function getDecryptData(privateKey: string, encryptedData: string) 
 
 // 对任意个数的参数取hash
 export function keccak256(...args: string[]) {
+    const hash = keccak256Hash.create();
+    for (let arg of args) hash.update(arg.toString());
+    const result = hash.hex();
+    return result;
+}
+
+export function sha256Hash(...args: string[]) {
     const hash = sha256.create();
     for (let arg of args) hash.update(arg.toString());
     const result = toHex(hash.digest());

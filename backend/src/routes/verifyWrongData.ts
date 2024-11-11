@@ -24,17 +24,12 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
     let data = req.body.wrongData as wrongDataType[];
     console.log(data);
 
-    let chainLength = 3,
-        token = data[chainLength + 1].PAReceive.encrypedToken;
-    if (!token) {
-        res.json({ result: false });
-        return;
-    }
+    let chainLength = 3;
 
     // 计算应得的token, 与接收的错误的比较,找到哪一步出了问题
     let appRealAccount = data[0].PA.from,
         chainId = data[0].PA.chainIndex;
-    if (!appRealAccount || !chainId) {
+    if (!appRealAccount || chainId === undefined || chainId === null) {
         console.log(
             `appRealAccount or chainId is empty, app realname account: ${appRealAccount}, chain id: ${chainId}`
         );
@@ -57,14 +52,18 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
             res.json({ result: false });
             return;
         }
-        token = addHexAndMod(expectedToken[i - 1], c);
+        let token = addHexAndMod(expectedToken[i - 1], c);
         expectedToken.push(token);
     }
     console.log(`real token add c: ${expectedToken}`);
 
     // 使用接收到的token计算, token - c
-    let preHash = null,
-        calculatedTokenList = [token];
+    let token = data[chainLength + 1].PAReceive.encrypedToken;
+    if (!token) {
+        res.json({ result: false });
+        return;
+    }
+    let calculatedTokenList = [token];
     for (let i = chainLength; i >= 1; i--) {
         console.log(`token: ${token}, i: ${i}, typeof token: ${typeof token}`);
         let c = data[i].PA.c,
@@ -91,25 +90,26 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
             return;
         }
         // 验证正向hash
+        let preHash = i === 1 ? null : data[i].PA.hf;
         let isHashCorrect = verifyHashForward(appTempAccount, r, hf, preHash);
         if (!isHashCorrect) {
-            console.log(`hash chain is wrong, hash forward: ${hf}`);
+            console.log(`hash chain is wrong, pre hash: ${preHash}, current hash: ${hf}`);
             res.json({ result: false });
             return;
         }
-        preHash = hf;
         // 减去c
         token = subHexAndMod(token, c);
         calculatedTokenList.unshift(token);
-        if (token !== expectedToken[i - 1]) {
-            console.log(`wrong relay index ${0}`);
-            // 通过链上hash找到relay的回应
-        }
     }
 
     // 找到错误的relay
     let wrongRelayIndex = -1;
     for (let i = 1; i <= chainLength; i++) {
+        console.log(
+            `i: ${i}, expected token: ${expectedToken[i]}, calculated token: ${
+                calculatedTokenList[i - 1]
+            }`
+        );
         if (expectedToken[i] != calculatedTokenList[i]) {
             wrongRelayIndex = i - 1; // 当前错误是之前导致的
             break;
@@ -118,7 +118,7 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
     if (wrongRelayIndex != -1) {
         let info = await prisma.supBlock.findUnique({
             where: {
-                id: wrongRelayIndex,
+                id: wrongRelayIndex + 1, // 编号错位
             },
             select: {
                 publicKey: true,
@@ -136,7 +136,7 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
     let calculatedToken = keccak256(token);
     let result = receivedHash === calculatedToken;
     console.log(
-        `token(sub all c): ${token}, hash received: ${receivedHash}, hash calculated: ${calculatedToken}, verify result: ${result}`
+        `token(sub all c): ${token}, app received hash: ${receivedHash}, app calculated hash: ${calculatedToken}, verify result: ${result}`
     );
     res.json({ result });
 });
