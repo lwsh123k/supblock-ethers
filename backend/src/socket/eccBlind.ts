@@ -13,6 +13,7 @@ import {
 import { Socket } from 'socket.io';
 import { logger } from '../util/logger';
 import { userSig } from './usersData';
+import { padTo64 } from '../contract/util/utils';
 
 // 生成size字节的随机数
 function random(size: number): BigInteger {
@@ -58,7 +59,7 @@ function blindMessage(m: string): { cBlinded: string; c: string } {
     const t = A.affineX.mod(n).toString();
     const c = BigInteger.fromHex(keccak256((m + t).toString()));
     const cBlinded = c.subtract(δ);
-    return { cBlinded: cBlinded.toString(16), c: c.toString(16) };
+    return { cBlinded: padTo64(cBlinded.toString(16)), c: padTo64(c.toString(16)) };
 }
 
 // 生成size字节的随机数t, 0 <= t < 模数n
@@ -79,10 +80,10 @@ function getPublicKey(): EccPoint {
     // console.log(k.toHex());
     R = G.multiply(k);
     return {
-        Rx: R.affineX.toString(16),
-        Ry: R.affineY.toString(16),
-        Px: P_self.affineX.toString(16),
-        Py: P_self.affineY.toString(16),
+        Rx: padTo64(R.affineX.toString(16)),
+        Ry: padTo64(R.affineY.toString(16)),
+        Px: padTo64(P_self.affineX.toString(16)),
+        Py: padTo64(P_self.affineY.toString(16)),
     };
 }
 
@@ -99,14 +100,14 @@ function getSig(cBlinded: string): { sBlind: string; tAry: [string, string, stri
         tStringAry[i] = tAry[i].toString(16);
     }
 
-    return { sBlind: sBlind.toString(16), tAry: tStringAry };
+    return { sBlind: padTo64(sBlind.toString(16)), tAry: tStringAry };
 }
 
 // 请求签名者去除盲化信息
 function unblindSig(sBlind: string): { s: string } {
     const sBlind_big = BigInteger.fromHex(sBlind);
     const s = sBlind_big.add(γ).mod(n);
-    return { s: s.toString(16) };
+    return { s: padTo64(s.toString(16)) };
 }
 
 // 验证签名

@@ -7,7 +7,7 @@ contract StoreData {
 	mapping(address => bytes) public publicKeys;
 	mapping(address => mapping(address => bytes[])) public relayData;
 
-	// hash: 保证提供的加密数据是对的
+	// dataHash: 对数据整体取hash, 保证提供的加密数据是对的
 	event App2RelayEvent(
 		address indexed from,
 		address indexed relay,
@@ -17,7 +17,7 @@ contract StoreData {
 		bool lastRelay
 	);
 	event Pre2NextEvent(address indexed from, address indexed relay, bytes data, uint dataIndex);
-	// hash: 保证提供的加密数据是对的
+	// dataHash: 对数据整体取hash, 保证提供的加密数据是对的, 与App2RelayEvent中的相对应, relay对app请求的回应
 	event RelayResEvidenceEvent(
 		address indexed relayRealAccount,
 		address indexed appTempAccount,

@@ -1,9 +1,10 @@
 import express from 'express';
 import { AppToRelayData } from '../socket/types';
-import { addHexAndMod, keccak256, subHexAndMod } from '../contract/util/utils';
+import { addHexAndMod, ensure0xPrefix, keccak256, subHexAndMod } from '../contract/util/utils';
 import { PrismaClient } from '@prisma/client';
 import { verifyHashForward } from '../contract/util/verifyHash';
 import { userSig } from '../socket/usersData';
+import { logger } from '../util/logger';
 
 // app received data
 export type AppReceivedData = {
@@ -42,9 +43,11 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
         res.json({ result: false });
         return;
     }
+    console.log('sig token array:', savedSig.t_array);
+    console.log('chain id:', chainId);
 
     // 使用真正的token计算, token + c
-    let expectedToken = [savedSig.t_array[chainId]];
+    let expectedToken = [savedSig.t_array[chainId]]; // relay i应该给下一个relay发送的数据
     for (let i = 1; i <= chainLength; i++) {
         let c = data[i].PA.c;
         if (!c) {
@@ -55,9 +58,9 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
         let token = addHexAndMod(expectedToken[i - 1], c);
         expectedToken.push(token);
     }
-    console.log(`real token add c: ${expectedToken}`);
+    console.log('expected token array:', expectedToken);
 
-    // 使用接收到的token计算, token - c
+    // 使用接收到的token计算, token - c, 假设validator诚实, 验证validator给applicant发过encrypted token
     let token = data[chainLength + 1].PAReceive.encrypedToken;
     if (!token) {
         res.json({ result: false });
@@ -65,7 +68,6 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
     }
     let calculatedTokenList = [token];
     for (let i = chainLength; i >= 1; i--) {
-        console.log(`token: ${token}, i: ${i}, typeof token: ${typeof token}`);
         let c = data[i].PA.c,
             infoHash = data[i].PA.hf,
             appTempAccount = data[i].PA.appTempAccount,
@@ -79,56 +81,71 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
             return;
         }
         // hash存在于链上
-        let count = await prisma.uploadHash.count({
+        let dataHash = ensure0xPrefix(keccak256(JSON.stringify(data[i].PA)));
+        console.log(`searching applicant to relay data hash: ${dataHash}`);
+        let count = await prisma.app2RelayEvent.count({
             where: {
-                infoHash: infoHash,
+                dataHash: dataHash,
             },
         });
         if (count === 0) {
-            console.log(`info hash not exist in tx history, hash: ${infoHash}`);
+            console.log(`data hash not exist in tx history, hash: ${dataHash}, i: ${i}`);
+            console.log('applicant data:', data[i].PA);
             res.json({ result: false });
             return;
         }
         // 验证正向hash
-        let preHash = i === 1 ? null : data[i].PA.hf;
+        let preHash = data[i - 1].PA.hf;
         let isHashCorrect = verifyHashForward(appTempAccount, r, hf, preHash);
         if (!isHashCorrect) {
-            console.log(`hash chain is wrong, pre hash: ${preHash}, current hash: ${hf}`);
+            console.log(`hash chain is wrong, i: ${i}, pre hash: ${preHash}, current hash: ${hf}`);
             res.json({ result: false });
             return;
         }
-        // 减去c
+        // 减去c之后, 就是relay发送给下一个relay的数据
         token = subHexAndMod(token, c);
         calculatedTokenList.unshift(token);
+        // console.log(`token: ${token}, i: ${i}, typeof token: ${typeof token}`);
     }
+    console.log('calculate token array:', calculatedTokenList);
 
     // 找到错误的relay
-    let wrongRelayIndex = -1;
+    let wrongRelayAddress = null;
     for (let i = 1; i <= chainLength; i++) {
         console.log(
-            `i: ${i}, expected token: ${expectedToken[i]}, calculated token: ${
-                calculatedTokenList[i - 1]
-            }`
+            `i: ${i}, expected token: ${expectedToken[i]}, calculated token: ${calculatedTokenList[i]}`
         );
         if (expectedToken[i] != calculatedTokenList[i]) {
-            wrongRelayIndex = i - 1; // 当前错误是之前导致的
+            let b = data[i].PA.b;
+            // 找到哪个relay对applicant做出回应
+            // 1. app to relay data, 既然得到了整条token, relay一定回应了applicant
+            // 2. relay res data, 根据relay响应用的anonymous account, 计算hash, 查找链上数据
+            let dataHash = ensure0xPrefix(keccak256(JSON.stringify(data[i].PA)));
+            let res = await prisma.app2RelayEvent.findFirst({
+                where: {
+                    dataHash: dataHash,
+                },
+                select: { relay: true },
+            });
+            if (!res) {
+                logger.error({ dataHash }, 'cannot find the relay responding to the applicant');
+            }
+            wrongRelayAddress = res?.relay;
             break;
         }
     }
-    if (wrongRelayIndex != -1) {
-        let info = await prisma.supBlock.findUnique({
+    if (wrongRelayAddress != null) {
+        let info = await prisma.supBlock.findFirst({
             where: {
-                id: wrongRelayIndex + 1, // 编号错位
+                address: wrongRelayAddress,
             },
             select: {
+                id: true,
                 publicKey: true,
                 address: true,
             },
         });
-        let relayRealnameAddress = info?.address;
-        console.log(
-            `wrong relay index: ${wrongRelayIndex}, wrong relay address: ${relayRealnameAddress}`
-        );
+        console.log(`wrong relay index: ${info!.id}, wrong relay address: ${info?.address}`);
     }
 
     // result

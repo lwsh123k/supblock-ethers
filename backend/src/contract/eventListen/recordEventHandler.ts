@@ -297,3 +297,126 @@ export async function handleReqReuploadNum(
     logger.info({ ni: res.ni }, 'relay random number reupload');
     sendPluginMessage(to, from, ni.toNumber() % 99, findResult?.infoHash!);
 }
+
+// 处理 App2RelayEvent
+export async function handleApp2RelayEvent(
+    args: ethers.utils.Result,
+    blockNumber: number,
+    gasUsed: ethers.BigNumber
+) {
+    const { from, relay, data, dataHash, dataIndex, lastRelay } = args;
+    let dataIndexNumber = dataIndex.toNumber();
+    await prisma.app2RelayEvent.upsert({
+        where: { dataHash }, // 使用 dataHash 作为唯一标识来查找是否已有该事件
+        update: {
+            from,
+            relay,
+            data,
+            dataIndex: dataIndexNumber,
+            lastRelay,
+            blockNum: blockNumber,
+            createdAt: new Date(), // 更新事件的记录时间
+        },
+        create: {
+            from,
+            relay,
+            data,
+            dataHash,
+            dataIndex: dataIndexNumber,
+            lastRelay,
+            blockNum: blockNumber,
+            createdAt: new Date(),
+        },
+    });
+
+    console.log('App2RelayEvent detected:', {
+        from,
+        relay,
+        data,
+        dataHash,
+        dataIndex: dataIndexNumber,
+        lastRelay,
+        blockNumber,
+        gasUsed,
+    });
+    // 可以将数据存入数据库，或执行其他业务逻辑
+}
+
+// 处理 Pre2NextEvent
+export async function handlePre2NextEvent(
+    args: ethers.utils.Result,
+    blockNumber: number,
+    gasUsed: ethers.BigNumber
+) {
+    const { from, relay, data, dataIndex } = args;
+    let dataIndexNumber = dataIndex.toNumber();
+    await prisma.pre2NextEvent.upsert({
+        where: {
+            from_relay_dataIndex: {
+                // 将组合唯一键封装为对象
+                from,
+                relay,
+                dataIndex: dataIndexNumber,
+            },
+        },
+        update: {
+            data,
+            blockNum: blockNumber,
+            createdAt: new Date(), // 更新事件的记录时间
+        },
+        create: {
+            from,
+            relay,
+            data,
+            dataIndex: dataIndexNumber,
+            blockNum: blockNumber,
+            createdAt: new Date(),
+        },
+    });
+    console.log('Pre2NextEvent detected:', {
+        from,
+        relay,
+        data,
+        dataIndex: dataIndexNumber,
+        blockNumber,
+        gasUsed,
+    });
+}
+
+// 处理 RelayResEvidenceEvent
+export async function handleRelayResEvidenceEvent(
+    args: ethers.utils.Result,
+    blockNumber: number,
+    gasUsed: ethers.BigNumber
+) {
+    const { relayRealAccount, appTempAccount, data, dataHash, chainIndex } = args;
+    await prisma.relayResEvidenceEvent.upsert({
+        where: { dataHash }, // 使用 dataHash 作为唯一标识来查找是否已有该事件
+        update: {
+            relayRealAccount,
+            appTempAccount,
+            data,
+            chainIndex,
+            blockNum: blockNumber,
+            createdAt: new Date(), // 更新事件的记录时间
+        },
+        create: {
+            relayRealAccount,
+            appTempAccount,
+            data,
+            dataHash,
+            chainIndex,
+            blockNum: blockNumber,
+            createdAt: new Date(),
+        },
+    });
+    console.log('RelayResEvidenceEvent detected:', {
+        relayRealAccount,
+        appTempAccount,
+        data,
+        dataHash,
+        chainIndex,
+        blockNumber,
+        gasUsed,
+    });
+}

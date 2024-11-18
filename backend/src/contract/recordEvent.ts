@@ -1,9 +1,12 @@
 import { ethers, utils } from 'ethers';
-import { getFairIntGen } from './getContractInstance';
+import { getFairIntGen, getStoreData } from './getContractInstance';
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../util/logger';
 import { sendPluginMessage } from '../socket/handlePluginMessage';
 import {
+    handleApp2RelayEvent,
+    handlePre2NextEvent,
+    handleRelayResEvidenceEvent,
     handleReqHashUpload,
     handleReqInfoUpload,
     handleReqReuploadNum,
@@ -16,7 +19,9 @@ import {
 export async function recordThroughBlock() {
     // contract and it's address
     const fairIntGen = getFairIntGen();
-    const fairIntGenAddress = fairIntGen.address;
+    const storeData = getStoreData();
+    const fairIntGenAddress = fairIntGen.address,
+        storeDataAddress = storeData.address;
 
     // websocket
     const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545');
@@ -39,16 +44,24 @@ export async function recordThroughBlock() {
             block.transactions.map((txHash) => provider.getTransactionReceipt(txHash))
         );
 
-        // filter by contract address
-        const relevantTxs = transactions.filter((tx) => tx.to === fairIntGenAddress);
+        // 过滤合约地址
+        const relevantTxs = transactions.filter(
+            (tx) => tx.to === fairIntGenAddress || tx.to === storeDataAddress
+        );
         // console.log(blockNumber, relevantTxs.length);
 
         // relevant tx
         for (const tx of relevantTxs) {
             for (const log of tx.logs)
                 try {
-                    const parsedLog = fairIntGen.interface.parseLog(log);
-
+                    let parsedLog;
+                    if (tx.to === fairIntGenAddress) parsedLog = fairIntGen.interface.parseLog(log);
+                    else if (tx.to === storeDataAddress)
+                        parsedLog = storeData.interface.parseLog(log);
+                    else {
+                        console.log(`can't parse log`);
+                        return;
+                    }
                     // handle different event
                     switch (parsedLog.name) {
                         case 'ReqHashUpload': {
@@ -73,6 +86,23 @@ export async function recordThroughBlock() {
                         }
                         case 'ResReuploadNum': {
                             await handleResReuploadNum(parsedLog.args, tx.blockNumber, tx.gasUsed);
+                            break;
+                        }
+                        case 'App2RelayEvent': {
+                            console.log('App2RelayEvent');
+                            await handleApp2RelayEvent(parsedLog.args, tx.blockNumber, tx.gasUsed);
+                            break;
+                        }
+                        case 'Pre2NextEvent': {
+                            await handlePre2NextEvent(parsedLog.args, tx.blockNumber, tx.gasUsed);
+                            break;
+                        }
+                        case 'RelayResEvidenceEvent': {
+                            await handleRelayResEvidenceEvent(
+                                parsedLog.args,
+                                tx.blockNumber,
+                                tx.gasUsed
+                            );
                             break;
                         }
                         default:
