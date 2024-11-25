@@ -97,7 +97,7 @@ function getSig(cBlinded: string): { sBlind: string; tAry: [string, string, stri
     for (let i = 0; i < 3; i++) {
         tAry[i] = generateRandomT(32);
         sBlind = sBlind.add(tAry[i]).mod(n);
-        tStringAry[i] = tAry[i].toString(16);
+        tStringAry[i] = padTo64(tAry[i].toString(16));
     }
 
     return { sBlind: padTo64(sBlind.toString(16)), tAry: tStringAry };
@@ -163,6 +163,7 @@ export function signBlindedAddress(socket: Socket, data: AppBlindedAddress) {
     sendBackData.sBlind = signedAddress.sBlind;
     sendBackData.chainIndex = data.chainId;
     sendBackData.point = eccPoint;
+    sendBackData.realToken = tAry;
     // socket.emit('hash forward verify correct', sendBackData);
     socket.emit('validator send sig and hash', sendBackData);
 }

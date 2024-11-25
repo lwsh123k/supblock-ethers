@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import { logger } from '../../util/logger';
 import { PrismaClient } from '@prisma/client';
 import { sendPluginMessage } from '../../socket/handlePluginMessage';
+import { sendRelayInfo } from '../../socket/handleRelayInfo';
 
 const prisma = new PrismaClient();
 
@@ -141,8 +142,10 @@ export async function handleReqInfoUpload(
     // console.log(iscorrect, other);
     // 如果都正确, 通知extension打开新页面;
     // 没办法知道请求者和响应者谁先上传, 所以都会调用sendPluginMessage, 然后在函数中判断只触发一次
-    if (iscorrect && other?.uploadNum?.correctness)
+    if (iscorrect && other?.uploadNum?.correctness) {
         sendPluginMessage(from, to, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 99, hash);
+        await sendRelayInfo(from, to, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 99, hash);
+    }
 }
 
 // res num
@@ -202,13 +205,20 @@ export async function handleResInfoUpload(
 
     logger.info({ correctness: iscorrect }, `relay random number successfully upload`);
     // console.log(iscorrect, other);
-    if (iscorrect && other?.uploadNum?.correctness)
+    if (iscorrect && other?.uploadNum?.correctness) {
         sendPluginMessage(
             to,
             from,
             (ni.toNumber() + Number(other?.uploadNum?.ni)) % 99,
             other.infoHash
         );
+        await sendRelayInfo(
+            to,
+            from,
+            (ni.toNumber() + Number(other?.uploadNum?.ni)) % 99,
+            other.infoHash
+        );
+    }
 }
 
 // req reupload
@@ -247,6 +257,7 @@ export async function handleResReuploadNum(
     });
     logger.info({ ni: res.ni }, 'applicant random number reupload');
     sendPluginMessage(from, to, ni.toNumber() % 99, originalHash);
+    await sendRelayInfo(from, to, ni.toNumber() % 99, originalHash);
 }
 
 // res reupload
@@ -296,6 +307,7 @@ export async function handleReqReuploadNum(
 
     logger.info({ ni: res.ni }, 'relay random number reupload');
     sendPluginMessage(to, from, ni.toNumber() % 99, findResult?.infoHash!);
+    await sendRelayInfo(to, from, ni.toNumber() % 99, findResult?.infoHash!);
 }
 
 // 处理 App2RelayEvent

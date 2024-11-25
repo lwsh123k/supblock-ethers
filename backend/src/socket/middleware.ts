@@ -14,7 +14,7 @@ export function useAuthMiddleware(socket: Socket, next: (err?: ExtendedError | u
     const info = socket.handshake.query as AuthInfo;
     // console.log(socket.handshake);
     let address = info.address;
-    if (address === 'plugin' || address === 'validator') {
+    if (address === 'plugin' || address === 'validator' || address === 'relayInfo') {
         logger.info(`${address} join`);
         onlineUsers[address] = socket;
         // next();

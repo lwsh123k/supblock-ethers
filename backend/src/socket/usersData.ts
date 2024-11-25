@@ -1,10 +1,14 @@
 import { Socket } from 'socket.io';
-import { AppToRelayData, SignedAddress } from './types';
+import { AppBlindUpload, AppToRelayData, SignedAddress } from './types';
 
 export const onlineUsers: { [propName: string]: Socket } = {};
 export const userSig: Map<string, SignedAddress> = new Map();
 export const chainNumber = 3;
 export const app2ValidatorData = new Map<string, AppToRelayData[]>(); // app给relay发送的chain init数据
+
+// user将b发送给server端, 方便后续打开新页面, relay info统计
+// 存储 hash => { applicant temp address, blindlingNumber } 的映射
+export const hashToBMapping = new Map<string, AppBlindUpload>();
 
 export function addApp2ValidatorData(address: string, data: AppToRelayData, chainId: number) {
     if (!app2ValidatorData.has(address)) {

@@ -1,30 +1,20 @@
 import { Socket } from 'socket.io';
 import { logger } from '../util/logger';
 import { verifyHashBackward, verifyHashForward } from '../contract/util/verifyHash';
-import {
-    addHexAndMod,
-    getDecryptData,
-    getEncryptData,
-    getHash,
-    keccak256,
-} from '../contract/util/utils';
-import { getStringHash } from '../contract/util/utils';
+import { getEncryptData } from '../contract/util/utils';
 import { PrismaClient } from '@prisma/client';
 import { writeFair, writeStoreData } from '../contract/eventListen/validatorListen';
-//import { getPublicKey, getSig } from '../util/eccBlind'
 import eccBlind from './eccBlind';
+import { AppToRelayData, PreToNextRelayData, NumInfo, ValidatorSendBackSig } from './types';
 import {
-    AppToRelayData,
-    PreToNextRelayData,
-    NumInfo,
-    ToApplicantSigned,
-    ValidatorSendBackSig,
-} from './types';
-import { DefaultEventsMap } from 'socket.io/dist/typed-events';
-import { addApp2ValidatorData, app2ValidatorData, onlineUsers, userSig } from './usersData';
-import { hashToBMapping } from './handlePluginMessage';
+    addApp2ValidatorData,
+    app2ValidatorData,
+    hashToBMapping,
+    onlineUsers,
+    userSig,
+} from './usersData';
 
-// 申请忙签名. validator listening applicant: chain init
+// 申请盲签名（必须每次都要点chain init, 两个功能: 盲签名和验证正向hash）. validator listening applicant: chain init
 let validatorSendBackData = new Map<string, ValidatorSendBackSig>();
 export function handleChainInit(socket: Socket, data: AppToRelayData) {
     logger.info('applicant to validator: initialization data');
@@ -59,6 +49,7 @@ export function handleChainInit(socket: Socket, data: AppToRelayData) {
             sendBackData.sBlind = value.sBlind;
             sendBackData.chainIndex = data.chainIndex;
             sendBackData.point = eccPoint;
+            sendBackData.realToken = value.t_array;
             console.log(sendBackData);
             // socket.emit('hash forward verify correct', sendBackData);
             socket.emit('validator send sig and hash', sendBackData);

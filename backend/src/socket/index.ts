@@ -12,8 +12,8 @@ import {
     handleFinalData,
     handleValidator2Next,
 } from './handleValidator';
-import { AppBlindUpload, handleAppBlindUpload, hashToBMapping } from './handlePluginMessage';
-import { AppBlindedAddress, AppToRelayData, PreToNextRelayData } from './types';
+import { handleAppBlindUpload } from './handlePluginMessage';
+import { AppBlindedAddress, AppBlindUpload, AppToRelayData, PreToNextRelayData } from './types';
 // For the client library
 import ioClient from 'socket.io-client';
 import { signBlindedAddress } from './eccBlind';
@@ -56,7 +56,8 @@ export function initSocket(
             'blinding number',
             'applicant to validator: final data',
             'relay to validator: final data',
-            ' applicant send blinded address',
+            'applicant send blinded address',
+            'send relay info',
         ];
         socket.onAny((eventName, data) => {
             if (excludeEvent.includes(eventName)) return;

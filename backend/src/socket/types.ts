@@ -46,6 +46,7 @@ export type ValidatorSendBackSig = {
     sBlind: string;
     tokenHash: [string, string, string];
     point: EccPoint;
+    realToken?: [string, string, string];
 };
 
 export type EccPoint = {
@@ -77,3 +78,13 @@ export type AppBlindedAddress = {
 };
 
 export type hashValues = [string, string, string];
+
+// applicant上传b
+export type AppBlindUpload = {
+    blindingNumber: number;
+    tempAccount: string;
+    relayAccount: string;
+    hash: string;
+    chainId: number; // 第几条链
+    relayId: number; // 第几个relay
+};
