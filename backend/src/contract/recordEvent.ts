@@ -177,40 +177,40 @@ const reconnect = async () => {
     await recordThroughBlock();
 };
 
-async function checkProviderStatus(provider: ethers.providers.WebSocketProvider) {
-    try {
-        // 获取底层的 WebSocket 连接
-        const ws = (provider as any)._websocket;
-        ws.ping();
-        if (!ws || ws.readyState === WebSocket.CLOSED) {
-            return { connected: false, status: 'CLOSED' };
-        }
+// async function checkProviderStatus(provider: ethers.providers.WebSocketProvider) {
+//     try {
+//         // 获取底层的 WebSocket 连接
+//         const ws = (provider as any)._websocket;
+//         ws.ping();
+//         if (!ws || ws.readyState === WebSocket.CLOSED) {
+//             return { connected: false, status: 'CLOSED' };
+//         }
 
-        if (ws.readyState === WebSocket.CONNECTING) {
-            return { connected: false, status: 'CONNECTING' };
-        }
+//         if (ws.readyState === WebSocket.CONNECTING) {
+//             return { connected: false, status: 'CONNECTING' };
+//         }
 
-        if (ws.readyState === WebSocket.CLOSING) {
-            return { connected: false, status: 'CLOSING' };
-        }
+//         if (ws.readyState === WebSocket.CLOSING) {
+//             return { connected: false, status: 'CLOSING' };
+//         }
 
-        // 再验证一下实际连接
-        const blockNumber = await provider.getBlockNumber();
-        return { connected: true, status: 'OPEN', blockNumber };
-    } catch (error) {
-        return { connected: false, status: 'ERROR', error };
-    }
-}
+//         // 再验证一下实际连接
+//         const blockNumber = await provider.getBlockNumber();
+//         return { connected: true, status: 'OPEN', blockNumber };
+//     } catch (error) {
+//         return { connected: false, status: 'ERROR', error };
+//     }
+// }
 
-async function monitorConnection() {
-    const status = await checkProviderStatus(provider);
-    console.log(status);
-    if (!status.connected) {
-        console.log(`Provider disconnected. Status: ${status.status}`);
-        // 执行重连逻辑
-        await reconnect();
-    }
-}
+// async function monitorConnection() {
+//     const status = await checkProviderStatus(provider);
+//     console.log(status);
+//     if (!status.connected) {
+//         console.log(`Provider disconnected. Status: ${status.status}`);
+//         // 执行重连逻辑
+//         await reconnect();
+//     }
+// }
 
-// 定期检查连接状态
-setInterval(monitorConnection, 60000);
+// // 定期检查连接状态
+// setInterval(monitorConnection, 60000);

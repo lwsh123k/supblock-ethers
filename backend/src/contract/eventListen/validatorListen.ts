@@ -32,6 +32,7 @@ export async function validatorListen(
             let { ni, ri, hash } = getRandom(tA.toNumber(), tB.toNumber());
             await writeFair.setResHash(from, hash);
             logger.info({ ni, ri, hash }, 'validator upload hash success');
+            await new Promise((resolve) => setTimeout(resolve, 1500));
             await writeFair.setResInfo(from, ni, ri);
             logger.info('validator upload random num success');
         } catch (error) {
