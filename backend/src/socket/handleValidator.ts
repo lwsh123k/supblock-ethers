@@ -203,14 +203,17 @@ async function verifyData(
     let isAppData = true;
     if (PreRelayData != null) isAppData = false;
 
-    for (let appToRelayData of finalAllAppToValidatorData) {
+    // 从后往前遍历, 避免之前数据的干扰
+    for (let i = finalAllAppToValidatorData.length - 1; i >= 0; i--) {
         // 验证applicant数据来源
+        let appToRelayData = finalAllAppToValidatorData[i];
         if (
             isAppData &&
             (applicantData!.r != appToRelayData.r || applicantData!.hf != appToRelayData.hf)
         )
             continue;
-        for (let preToNextRelayData of finalAllPreToValidatorData) {
+        for (let j = finalAllPreToValidatorData.length - 1; j >= 0; j--) {
+            let preToNextRelayData = finalAllPreToValidatorData[j];
             // 验证relay数据来源
             if (
                 !isAppData &&

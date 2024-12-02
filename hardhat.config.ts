@@ -9,7 +9,7 @@ const config: HardhatUserConfig = {
         // ganache: { url: 'http://127.0.0.1:8545' },
         hardhat: {
             mining: {
-                auto: false,
+                auto: true,
                 interval: 1500,
             },
             accounts: {

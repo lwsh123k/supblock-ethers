@@ -42,6 +42,17 @@ export function sendPluginMessage(
             hashOfApplicant: hashA,
             url: 'http://localhost:5173/bridge',
         });
+        logger.info(
+            {
+                applicant,
+                relay,
+                blindedFairIntNum,
+                fairIntegerNumber,
+                blindingNumber,
+                hashOfApplicant: hashA,
+            },
+            'fair integer has been selected, sending to extension'
+        );
     } else logger.error('plugin not connect');
 }
 

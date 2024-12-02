@@ -391,7 +391,7 @@ export async function handlePre2NextEvent(
         data,
         dataIndex: dataIndexNumber,
         blockNumber,
-        gasUsed,
+        gasUsed: gasUsed.toNumber(),
     });
 }
 
@@ -429,6 +429,6 @@ export async function handleRelayResEvidenceEvent(
         dataHash,
         chainIndex,
         blockNumber,
-        gasUsed,
+        gasUsed: gasUsed.toNumber(),
     });
 }

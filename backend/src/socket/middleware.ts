@@ -32,5 +32,6 @@ export function useAuthMiddleware(socket: Socket, next: (err?: ExtendedError | u
         }
     }
     // for testing, always have user get reconnected
+    onlineUsers[address] = socket;
     next();
 }
