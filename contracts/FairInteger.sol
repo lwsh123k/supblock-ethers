@@ -57,7 +57,7 @@ contract FairInteger {
 		uint256 tA,
 		bytes32 hashA,
 		uint256 uploadTime,
-        uint256 tB
+		uint256 tB
 	);
 	event ResInfoUpload(
 		address indexed from,
@@ -67,7 +67,7 @@ contract FairInteger {
 		uint256 tB,
 		bytes32 hashB,
 		uint256 uploadTime,
-        uint256 tA
+		uint256 tA
 	);
 	// 随机数重传
 	event ReqReuploadNum(
@@ -86,6 +86,10 @@ contract FairInteger {
 		bytes32 originalHash,
 		uint256 uploadTime
 	);
+
+	// 匿名账户激活事件
+	event ActivateAccount(address indexed index, address indexed anonymousAccount);
+	mapping(uint => address) private indexToAddress;
 
 	// 记录成功执行的次数
 	mapping(address => uint256) private executeTime;
@@ -222,7 +226,7 @@ contract FairInteger {
 			integerInfo.tA,
 			integerInfo.infoHashA,
 			block.timestamp,
-            integerInfo.tB
+			integerInfo.tB
 		);
 	}
 
@@ -258,7 +262,7 @@ contract FairInteger {
 			integerInfo.tB,
 			integerInfo.infoHashB,
 			block.timestamp,
-            integerInfo.tA
+			integerInfo.tA
 		);
 	}
 
