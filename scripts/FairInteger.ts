@@ -27,4 +27,5 @@ export async function fairIntegerFunction() {
 
     await writeContractAbi(contractName, contractData);
     await writeToFiles(contractName, myContract.address);
+    return myContract.address;
 }

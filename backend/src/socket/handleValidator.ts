@@ -1,7 +1,7 @@
 import { Socket } from 'socket.io';
 import { logger } from '../util/logger';
 import { verifyHashBackward, verifyHashForward } from '../contract/util/verifyHash';
-import { getEncryptData } from '../contract/util/utils';
+import { ensure0xPrefix, getEncryptData, keccak256 } from '../contract/util/utils';
 import { PrismaClient } from '@prisma/client';
 import { writeFair, writeStoreData } from '../contract/eventListen/validatorListen';
 import eccBlind from './eccBlind';
@@ -13,6 +13,7 @@ import {
     onlineUsers,
     userSig,
 } from './usersData';
+import { getAccountInfoByContract } from '../contract/util/getAccountById';
 
 // 申请盲签名（必须每次都要点chain init, 两个功能: 盲签名和验证正向hash）. validator listening applicant: chain init
 let validatorSendBackData = new Map<string, ValidatorSendBackSig>();
@@ -60,7 +61,7 @@ export function handleChainInit(socket: Socket, data: AppToRelayData) {
     }
 }
 
-// validaor给他之后的第一个relay发送消息. validator listening plugin: new page opened, send to next relay
+// validaor 监听来自插件的信息: 当新页面打开时, 给下一个relay的匿名账户发送信息
 const prisma = new PrismaClient();
 export async function handleValidator2Next(socket: Socket, data: NumInfo) {
     logger.info(
@@ -113,18 +114,11 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
             // let token = '3333333333333333333333333333333333333333333333333333333333333333';
             // let encryptedToken = await getEncryptData(appTempAccountPubkey?.publicKey!, token);
 
-            // 给下一个relay发送信息, 查找对应的address
-            let nxetRelay = await prisma.supBlock.findUnique({
-                where: {
-                    id: blindedFairIntNum + 1,
-                },
-                select: {
-                    publicKey: true,
-                    address: true,
-                },
-            });
-            if (nxetRelay === null) throw new Error('error when find public key using index');
-            let nextRelayData: PreToNextRelayData = {
+            // 查找下一个relay的匿名账户
+            let nextRelayAnonymousAccount = await getAccountInfoByContract(blindedFairIntNum);
+            if (nextRelayAnonymousAccount === null)
+                throw new Error('error when find public key using index');
+            let data: PreToNextRelayData = {
                 from: '0x863218e6ADad41bC3c2cb4463E26B625564ea3Ba',
                 to: null,
                 preAppTempAccount: applicant,
@@ -136,12 +130,18 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
                 t: token!,
                 l: 0, // validator's relay index is 0
             };
-            nextRelayData.to = nxetRelay.address;
-            logger.info(nextRelayData, 'validator sends token to first relay');
-            let encryptedData = await getEncryptData(nxetRelay.publicKey, nextRelayData);
+            data.to = nextRelayAnonymousAccount.address;
+            logger.info(data, 'validator sends token to first relay');
+            let relayDataHash = keccak256(JSON.stringify(data));
+            relayDataHash = ensure0xPrefix(relayDataHash);
+            let encryptedData = await getEncryptData(nextRelayAnonymousAccount.publicKey, data);
 
             // upload to blockchain
-            await writeStoreData.setPre2Next(nxetRelay.address, encryptedData);
+            await writeStoreData.setPre2Next(
+                nextRelayAnonymousAccount.address,
+                encryptedData,
+                relayDataHash
+            );
             logger.info('validator sends token to first relay: data upload success');
         } catch (error) {
             logger.error(error, 'error when validator upload data to next relay');

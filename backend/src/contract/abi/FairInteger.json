@@ -16,6 +16,28 @@
   {
     "type": "event",
     "anonymous": false,
+    "name": "ActivateAccount",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "index",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "anonymousAccount",
+        "indexed": true
+      },
+      {
+        "type": "bytes",
+        "name": "publicKey",
+        "indexed": false
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "anonymous": false,
     "name": "ReqHashUpload",
     "inputs": [
       {
@@ -298,6 +320,59 @@
   },
   {
     "type": "function",
+    "name": "activateAccount",
+    "constant": false,
+    "payable": false,
+    "inputs": [
+      {
+        "type": "bytes32",
+        "name": "sig"
+      },
+      {
+        "type": "bytes",
+        "name": "publicKey"
+      }
+    ],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "count",
+    "constant": true,
+    "stateMutability": "view",
+    "payable": false,
+    "inputs": [],
+    "outputs": [
+      {
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "getAddressById",
+    "constant": true,
+    "stateMutability": "view",
+    "payable": false,
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "_index"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "address",
+        "name": "account"
+      },
+      {
+        "type": "bytes",
+        "name": "publicKey"
+      }
+    ]
+  },
+  {
+    "type": "function",
     "name": "getIndexOfHash",
     "constant": true,
     "stateMutability": "view",
@@ -326,6 +401,24 @@
             "name": "index"
           }
         ]
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "getPublicKeyByAddress",
+    "constant": true,
+    "stateMutability": "view",
+    "payable": false,
+    "inputs": [
+      {
+        "type": "address",
+        "name": "account"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "bytes"
       }
     ]
   },

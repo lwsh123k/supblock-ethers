@@ -1,5 +1,5 @@
 import { ethers, utils } from 'ethers';
-import { getFairIntGen, getStoreData } from './getContractInstance';
+import { getFairIntGen, getStoreData } from './util/getContractInstance';
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../util/logger';
 import { sendPluginMessage } from '../socket/handlePluginMessage';

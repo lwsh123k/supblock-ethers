@@ -87,9 +87,11 @@ contract FairInteger {
 		uint256 uploadTime
 	);
 
-	// 匿名账户激活事件
-	event ActivateAccount(address indexed index, address indexed anonymousAccount);
+	// 账户激活
+	event ActivateAccount(uint indexed index, address indexed anonymousAccount, bytes publicKey);
 	mapping(uint => address) private indexToAddress;
+	mapping(address => bytes) private addressToPublicKey;
+	uint public count; // 激活账户数量
 
 	// 记录成功执行的次数
 	mapping(address => uint256) private executeTime;
@@ -129,6 +131,33 @@ contract FairInteger {
 	modifier onlyHash(bytes32 infoHash) {
 		require(hashIndex[infoHash].req == address(0), "hash exist");
 		_;
+	}
+
+	// 激活账户
+	function activateAccount(bytes32 sig, bytes memory publicKey) external {
+		// 验证公钥与调用者地址的对应关系
+		require(
+			_verifyPublicKey(publicKey, msg.sender),
+			"Public key does not correspond to sender address"
+		);
+
+		// 记录, 并增加激活计数
+		indexToAddress[count++] = msg.sender;
+		addressToPublicKey[msg.sender] = publicKey;
+
+		emit ActivateAccount(count, msg.sender, publicKey);
+	}
+	// 通过索引获取地址和公钥
+	function getAddressById(
+		uint _index
+	) external view returns (address account, bytes memory publicKey) {
+		account = indexToAddress[_index];
+		require(account != address(0), "No address found for the given index");
+		publicKey = addressToPublicKey[account];
+	}
+	//  获取地址对应的公钥
+	function getPublicKeyByAddress(address account) external view returns (bytes memory) {
+		return addressToPublicKey[account];
 	}
 
 	// 设置请求者infoHash
@@ -426,5 +455,28 @@ contract FairInteger {
 				block.timestamp
 			);
 		}
+	}
+
+	/**
+	 * @dev 验证公钥是否对应于给定的地址
+	 * @param publicKey 提供的公钥
+	 * @param addr 地址
+	 * @return 是否对应
+	 */
+	function _verifyPublicKey(bytes memory publicKey, address addr) internal pure returns (bool) {
+		// 公钥应该是65字节（未压缩的形式）
+		if (publicKey.length != 65) {
+			return false;
+		}
+
+		// 去掉0x04前缀
+		bytes memory pubKeyNoPrefix = new bytes(64);
+		for (uint i = 0; i < 64; i++) {
+			pubKeyNoPrefix[i] = publicKey[i + 1];
+		}
+		bytes32 pubKeyHash = keccak256(pubKeyNoPrefix); // 计算hash
+		address derivedAddress = address(uint160(uint256(pubKeyHash))); // 获取最后20字节
+
+		return (derivedAddress == addr); // 比较地址
 	}
 }

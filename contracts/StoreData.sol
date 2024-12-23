@@ -16,13 +16,20 @@ contract StoreData {
 		uint dataIndex,
 		bool lastRelay
 	);
-	event Pre2NextEvent(address indexed from, address indexed relay, bytes data, uint dataIndex);
+	event Pre2NextEvent(
+		address indexed from,
+		address indexed relay,
+		bytes data,
+		bytes32 dataHash,
+		uint dataIndex
+	);
 	// dataHash: 对数据整体取hash, 保证提供的加密数据是对的, 与App2RelayEvent中的相对应, relay对app请求的回应
 	event RelayResEvidenceEvent(
 		address indexed relayRealAccount,
 		address indexed appTempAccount,
 		bytes data,
 		bytes32 dataHash,
+		bytes32 responseEvidence,
 		uint8 chainIndex
 	);
 
@@ -61,10 +68,16 @@ contract StoreData {
 	}
 
 	// set: pre relay -> next
-	function setPre2Next(address relay, bytes memory data) public {
+	function setPre2Next(address relay, bytes memory data, bytes32 dataHash) public {
 		relayData[msg.sender][relay].push(data);
 		// applicant为与pre relay对应的pre applicant tempAccount
-		emit Pre2NextEvent(msg.sender, relay, data, relayData[msg.sender][relay].length - 1);
+		emit Pre2NextEvent(
+			msg.sender,
+			relay,
+			data,
+			dataHash,
+			relayData[msg.sender][relay].length - 1
+		);
 	}
 
 	// get: applicant -> relay. index从0开始计数
@@ -84,8 +97,16 @@ contract StoreData {
 		address appTempAccount,
 		bytes memory encryptedData,
 		bytes32 dataHash,
+		bytes32 responseEvidence,
 		uint8 chainIndex
 	) public {
-		emit RelayResEvidenceEvent(msg.sender, appTempAccount, encryptedData, dataHash, chainIndex);
+		emit RelayResEvidenceEvent(
+			msg.sender,
+			appTempAccount,
+			encryptedData,
+			dataHash,
+			responseEvidence,
+			chainIndex
+		);
 	}
 }

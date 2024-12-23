@@ -4,7 +4,7 @@ import cors from 'cors';
 import routes from './routes'; // 引入路由
 import { initSocket } from './socket';
 import { record } from './contract/test/recordEvent';
-import { getFairIntGen } from './contract/getContractInstance';
+import { getFairIntGen } from './contract/util/getContractInstance';
 import { ethers } from 'ethers';
 import { validatorListen } from './contract/eventListen/validatorListen';
 import { recordThroughBlock } from './contract/recordEvent';

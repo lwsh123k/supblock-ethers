@@ -1,6 +1,6 @@
-import { provider } from './util/provider';
-import address from './contract-address.json';
-import { FairInteger__factory, StoreData__factory } from './types';
+import { provider } from './provider';
+import address from '../contract-address.json';
+import { FairInteger__factory, StoreData__factory } from '../types';
 
 // return fair integer contract instance
 export function getFairIntGen() {

@@ -1,4 +1,4 @@
-import { getFairIntGen, getStoreData } from '../getContractInstance';
+import { getFairIntGen, getStoreData } from '../util/getContractInstance';
 import 'dotenv/config';
 import { provider } from '../util/provider';
 import { Wallet } from 'ethers';
@@ -20,7 +20,7 @@ export const writeStoreData = readOnlyStoreData.connect(
 export async function validatorListen(
     myAddress: string = '0x863218e6ADad41bC3c2cb4463E26B625564ea3Ba'
 ) {
-    // validator监听applicant hash上传
+    // validator监听applicant hash上传, 之后一次性上传hash, 随机数
     let hashFilter = fairIntGen.filters.ReqHashUpload(null, myAddress);
     fairIntGen.on(hashFilter, async (from, to, infoHash, tA, tB, uploadTime, index) => {
         applicantIndexMap.set(from, index.toNumber());
@@ -32,7 +32,7 @@ export async function validatorListen(
             let { ni, ri, hash } = getRandom(tA.toNumber(), tB.toNumber());
             await writeFair.setResHash(from, hash);
             logger.info({ ni, ri, hash }, 'validator upload hash success');
-            await new Promise((resolve) => setTimeout(resolve, 1500));
+            // await new Promise((resolve) => setTimeout(resolve, 1500));
             await writeFair.setResInfo(from, ni, ri);
             logger.info('validator upload random num success');
         } catch (error) {
@@ -40,7 +40,7 @@ export async function validatorListen(
         }
     });
 
-    // validator监听applicant random上传
+    // validator监听applicant random上传, 判断是否重传
     let filter = fairIntGen.filters.ReqInfoUpload(null, myAddress);
     fairIntGen.on(filter, async (from, to, ni, ri, tA, hashA, uploadTime, tB) => {
         // verify random num, 假设validator一定会上传正确的随机数

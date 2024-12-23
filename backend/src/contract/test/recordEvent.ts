@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { getFairIntGen } from '../getContractInstance';
+import { getFairIntGen } from '../util/getContractInstance';
 import { provider } from '../util/provider';
 import { ethers } from 'ethers';
 import { sendPluginMessage } from '../../socket/handlePluginMessage';

@@ -360,15 +360,16 @@ export async function handlePre2NextEvent(
     blockNumber: number,
     gasUsed: ethers.BigNumber
 ) {
-    const { from, relay, data, dataIndex } = args;
+    const { from, relay, data, dataHash, dataIndex } = args;
     let dataIndexNumber = dataIndex.toNumber();
     await prisma.pre2NextEvent.upsert({
         where: {
-            from_relay_dataIndex: {
+            from_relay_dataIndex_dataHash: {
                 // 将组合唯一键封装为对象
                 from,
                 relay,
                 dataIndex: dataIndexNumber,
+                dataHash,
             },
         },
         update: {
@@ -380,6 +381,7 @@ export async function handlePre2NextEvent(
             from,
             relay,
             data,
+            dataHash,
             dataIndex: dataIndexNumber,
             blockNum: blockNumber,
             createdAt: new Date(),
@@ -389,6 +391,7 @@ export async function handlePre2NextEvent(
         from,
         relay,
         data,
+        dataHash,
         dataIndex: dataIndexNumber,
         blockNumber,
         gasUsed: gasUsed.toNumber(),
@@ -401,7 +404,7 @@ export async function handleRelayResEvidenceEvent(
     blockNumber: number,
     gasUsed: ethers.BigNumber
 ) {
-    const { relayRealAccount, appTempAccount, data, dataHash, chainIndex } = args;
+    const { relayRealAccount, appTempAccount, data, dataHash, responseEvidence, chainIndex } = args;
     await prisma.relayResEvidenceEvent.upsert({
         where: { dataHash }, // 使用 dataHash 作为唯一标识来查找是否已有该事件
         update: {
@@ -417,6 +420,7 @@ export async function handleRelayResEvidenceEvent(
             appTempAccount,
             data,
             dataHash,
+            responseEvidence,
             chainIndex,
             blockNum: blockNumber,
             createdAt: new Date(),
@@ -427,6 +431,7 @@ export async function handleRelayResEvidenceEvent(
         appTempAccount,
         data,
         dataHash,
+        responseEvidence,
         chainIndex,
         blockNumber,
         gasUsed: gasUsed.toNumber(),

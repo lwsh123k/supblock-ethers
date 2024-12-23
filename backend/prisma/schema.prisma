@@ -114,11 +114,12 @@ model Pre2NextEvent {
     from      String   @map("from_address") // 发送方地址
     relay     String   @map("relay_address") // 中继地址
     data      String // 事件中的数据
+    dataHash  String   @map("data_hash")
     dataIndex Int // 数据索引
     blockNum  Int
     createdAt DateTime @default(now()) // 事件的记录时间
 
-    @@unique([from, relay, dataIndex]) // 组合唯一键
+    @@unique([from, relay, dataIndex, dataHash]) // 组合唯一键
 }
 
 // 定义 `RelayResEvidenceEvent` 表
@@ -127,7 +128,8 @@ model RelayResEvidenceEvent {
     relayRealAccount String   @map("relay_real_account") // 中继真实账户
     appTempAccount   String   @map("app_temp_account") // 应用临时账户
     data             String // 事件中的数据
-    dataHash         String   @unique @map("data_hash") // 数据哈希值
+    dataHash         String   @unique @map("data_hash")
+    responseEvidence String   @map("response_evidence")
     chainIndex       Int // 链索引
     blockNum         Int
     createdAt        DateTime @default(now()) // 事件的记录时间

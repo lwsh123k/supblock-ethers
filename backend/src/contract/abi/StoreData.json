@@ -57,6 +57,11 @@
         "indexed": false
       },
       {
+        "type": "bytes32",
+        "name": "dataHash",
+        "indexed": false
+      },
+      {
         "type": "uint256",
         "name": "dataIndex",
         "indexed": false
@@ -86,6 +91,11 @@
       {
         "type": "bytes32",
         "name": "dataHash",
+        "indexed": false
+      },
+      {
+        "type": "bytes32",
+        "name": "responseEvidence",
         "indexed": false
       },
       {
@@ -217,6 +227,10 @@
       {
         "type": "bytes",
         "name": "data"
+      },
+      {
+        "type": "bytes32",
+        "name": "dataHash"
       }
     ],
     "outputs": []
@@ -251,6 +265,10 @@
       {
         "type": "bytes32",
         "name": "dataHash"
+      },
+      {
+        "type": "bytes32",
+        "name": "responseEvidence"
       },
       {
         "type": "uint8",
