@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 const EthCrypto = require('eth-crypto');
 
 // 将index 公钥 账户从文件中读取, 存放到sqlite
-// 1-100为real name account
+// 0-99为real name account, 但注意prisma id从1开始
 async function insertDocs() {
     const prisma = new PrismaClient();
     try {

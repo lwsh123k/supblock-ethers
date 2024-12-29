@@ -54,62 +54,62 @@ interface Account {
     addressB: string;
     hashB: string;
 }
-slqiteRouter.post('/getGasStatistic', async (req, res) => {
-    console.log(11);
-    let accounts: Account[] = req.body.accounts;
-    try {
-        let result = [];
-        for (let account of accounts) {
-            let infoA = await prisma.uploadHash.findUnique({
-                where: {
-                    infoHash: account.hashA,
-                },
-                select: {
-                    from: true,
-                    to: true,
-                    gas: true,
-                    uploadNum: {
-                        select: {
-                            gas: true,
-                        },
-                    },
-                    reuploadNum: {
-                        select: {
-                            gas: true,
-                        },
-                    },
-                },
-            });
+// slqiteRouter.post('/getGasStatistic', async (req, res) => {
+//     console.log(11);
+//     let accounts: Account[] = req.body.accounts;
+//     try {
+//         let result = [];
+//         for (let account of accounts) {
+//             let infoA = await prisma.uploadHash.findUnique({
+//                 where: {
+//                     infoHash: account.hashA,
+//                 },
+//                 select: {
+//                     from: true,
+//                     to: true,
+//                     gas: true,
+//                     uploadNum: {
+//                         select: {
+//                             gas: true,
+//                         },
+//                     },
+//                     reuploadNum: {
+//                         select: {
+//                             gas: true,
+//                         },
+//                     },
+//                 },
+//             });
 
-            let infoB = await prisma.uploadHash.findUnique({
-                where: {
-                    infoHash: account.hashB,
-                },
-                select: {
-                    from: true,
-                    to: true,
-                    gas: true,
-                    uploadNum: {
-                        select: {
-                            gas: true,
-                        },
-                    },
-                    reuploadNum: {
-                        select: {
-                            gas: true,
-                        },
-                    },
-                },
-            });
+//             let infoB = await prisma.uploadHash.findUnique({
+//                 where: {
+//                     infoHash: account.hashB,
+//                 },
+//                 select: {
+//                     from: true,
+//                     to: true,
+//                     gas: true,
+//                     uploadNum: {
+//                         select: {
+//                             gas: true,
+//                         },
+//                     },
+//                     reuploadNum: {
+//                         select: {
+//                             gas: true,
+//                         },
+//                     },
+//                 },
+//             });
 
-            result.push([infoA, infoB]);
-        }
-        res.send(result);
-    } catch {
-    } finally {
-        // 实际开发过程中不用每次都关闭连接
-        // await prisma.$disconnect();
-    }
-});
+//             result.push([infoA, infoB]);
+//         }
+//         res.send(result);
+//     } catch {
+//     } finally {
+//         // 实际开发过程中不用每次都关闭连接
+//         // await prisma.$disconnect();
+//     }
+// });
 
 export { slqiteRouter };

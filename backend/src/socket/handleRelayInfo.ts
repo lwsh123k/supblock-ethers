@@ -46,5 +46,5 @@ export async function sendRelayInfo(
             chainId,
             relayId,
         });
-    } else logger.error('relayInfo not connect');
+    } else logger.error('not open relay info page, not connect to server');
 }

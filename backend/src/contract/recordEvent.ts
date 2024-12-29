@@ -16,6 +16,15 @@ import {
 } from './eventListen/recordEventHandler';
 import { provider } from './util/provider';
 import WebSocket from 'ws';
+import { Pre2NextEventEventObject } from './types/StoreData';
+import {
+    ReqHashUploadEventObject,
+    ReqInfoUploadEventObject,
+    ReqReuploadNumEventObject,
+    ResHashUploadEventObject,
+    ResInfoUploadEventObject,
+    ResReuploadNumEventObject,
+} from './types/FairInteger';
 
 // listen new event through block to promise event order
 let currentBlockNumber = 0;
@@ -60,7 +69,7 @@ export async function recordThroughBlock() {
                 for (const tx of relevantTxs) {
                     for (const log of tx.logs)
                         try {
-                            let parsedLog;
+                            let parsedLog: ethers.utils.LogDescription;
                             if (tx.to === fairIntGenAddress)
                                 parsedLog = fairIntGen.interface.parseLog(log);
                             else if (tx.to === storeDataAddress)
@@ -73,7 +82,8 @@ export async function recordThroughBlock() {
                             switch (parsedLog.name) {
                                 case 'ReqHashUpload': {
                                     await handleReqHashUpload(
-                                        parsedLog.args,
+                                        tx.transactionHash,
+                                        parsedLog.args as unknown as ReqHashUploadEventObject,
                                         tx.blockNumber,
                                         tx.gasUsed
                                     );
@@ -81,7 +91,8 @@ export async function recordThroughBlock() {
                                 }
                                 case 'ResHashUpload': {
                                     await handleResHashUpload(
-                                        parsedLog.args,
+                                        tx.transactionHash,
+                                        parsedLog.args as unknown as ResHashUploadEventObject,
                                         tx.blockNumber,
                                         tx.gasUsed
                                     );
@@ -89,7 +100,8 @@ export async function recordThroughBlock() {
                                 }
                                 case 'ReqInfoUpload': {
                                     await handleReqInfoUpload(
-                                        parsedLog.args,
+                                        tx.transactionHash,
+                                        parsedLog.args as unknown as ReqInfoUploadEventObject,
                                         tx.blockNumber,
                                         tx.gasUsed
                                     );
@@ -97,7 +109,8 @@ export async function recordThroughBlock() {
                                 }
                                 case 'ResInfoUpload': {
                                     await handleResInfoUpload(
-                                        parsedLog.args,
+                                        tx.transactionHash,
+                                        parsedLog.args as unknown as ResInfoUploadEventObject,
                                         tx.blockNumber,
                                         tx.gasUsed
                                     );
@@ -105,7 +118,8 @@ export async function recordThroughBlock() {
                                 }
                                 case 'ReqReuploadNum': {
                                     await handleReqReuploadNum(
-                                        parsedLog.args,
+                                        tx.transactionHash,
+                                        parsedLog.args as unknown as ReqReuploadNumEventObject,
                                         tx.blockNumber,
                                         tx.gasUsed
                                     );
@@ -113,7 +127,8 @@ export async function recordThroughBlock() {
                                 }
                                 case 'ResReuploadNum': {
                                     await handleResReuploadNum(
-                                        parsedLog.args,
+                                        tx.transactionHash,
+                                        parsedLog.args as unknown as ResReuploadNumEventObject,
                                         tx.blockNumber,
                                         tx.gasUsed
                                     );
@@ -122,6 +137,7 @@ export async function recordThroughBlock() {
                                 case 'App2RelayEvent': {
                                     console.log('App2RelayEvent');
                                     await handleApp2RelayEvent(
+                                        tx.transactionHash,
                                         parsedLog.args,
                                         tx.blockNumber,
                                         tx.gasUsed
@@ -130,7 +146,8 @@ export async function recordThroughBlock() {
                                 }
                                 case 'Pre2NextEvent': {
                                     await handlePre2NextEvent(
-                                        parsedLog.args,
+                                        tx.transactionHash,
+                                        parsedLog.args as unknown as Pre2NextEventEventObject,
                                         tx.blockNumber,
                                         tx.gasUsed
                                     );
@@ -138,6 +155,7 @@ export async function recordThroughBlock() {
                                 }
                                 case 'RelayResEvidenceEvent': {
                                     await handleRelayResEvidenceEvent(
+                                        tx.transactionHash,
                                         parsedLog.args,
                                         tx.blockNumber,
                                         tx.gasUsed

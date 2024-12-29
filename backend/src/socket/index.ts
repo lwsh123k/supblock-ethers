@@ -63,7 +63,7 @@ export function initSocket(
             if (excludeEvent.includes(eventName)) return;
             const toSocket = onlineUsers[data.to];
             if (toSocket) {
-                console.log('from: ', data.from, '\nto: ', data.to, '\ndata:', data);
+                logger.info({ from: data.from, to: data.to, data: data }, 'socket forwards msg');
                 toSocket.emit(eventName, data);
             }
         });

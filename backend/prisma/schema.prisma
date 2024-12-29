@@ -12,23 +12,6 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
-model User {
-    id    Int     @id @default(autoincrement())
-    email String  @unique
-    name  String?
-    // 关系字段是虚拟的, 并不会生成或者改变数据库字段, 它只是定义模型之间的关系
-    posts Post[]
-}
-
-model Post {
-    id        Int     @id @default(autoincrement())
-    title     String
-    content   String?
-    published Boolean @default(false)
-    author    User    @relation(fields: [authorId], references: [id])
-    authorId  Int
-}
-
 model Transaction {
     id        Int      @id @default(autoincrement())
     from      String
@@ -44,93 +27,91 @@ model SupBlock {
 }
 
 model UploadHash {
-    id          Int          @id @default(autoincrement())
-    from        String
-    to          String
-    types       Int
-    infoHash    String       @unique
-    tA          String
-    tB          String
-    index       String
-    timestamp   DateTime
-    blockNum    Int
-    gas         Int
-    uploadNum   UploadNum?
-    reuploadNum ReuploadNum?
-
-    @@index([from, to, types], name: "idx_upload_hash")
+    id              Int    @id @default(autoincrement())
+    transactionHash String @unique @map("transaction_hash")
+    from            String
+    to              String
+    types           Int
+    infoHash        String
+    tA              String
+    tB              String
+    index           String
+    blockNum        Int
+    gas             Int
+    // @@index([from, to, types], name: "idx_upload_hash") // 创建索引, 提高搜索性能
 }
 
 model UploadNum {
-    id          Int        @id @default(autoincrement())
-    from        String
-    to          String
-    types       Int
-    ni          String
-    ri          String
-    t           String // 执行次数
-    timestamp   DateTime
-    blockNum    Int
-    gas         Int
-    correctness Boolean
-    uploadHash  UploadHash @relation(fields: [numHash], references: [infoHash])
-    numHash     String     @unique // 外键, 作为随机数和hash数据的关联
+    id              Int     @id @default(autoincrement())
+    transactionHash String  @unique @map("transaction_hash")
+    from            String
+    to              String
+    types           Int
+    ni              String
+    ri              String
+    t               String // 执行次数
+    blockNum        Int
+    gas             Int
+    correctness     Boolean
+    numHashA        String
+    numHashB        String
 
     @@index([from, to, types], name: "idx_upload_num")
 }
 
 model ReuploadNum {
-    id           Int        @id @default(autoincrement())
-    from         String
-    to           String
-    types        Int
-    ni           String
-    ri           String
-    timestamp    DateTime
-    blockNum     Int
-    gas          Int
-    uploadHash   UploadHash @relation(fields: [originalHash], references: [infoHash])
-    originalHash String     @unique
+    id              Int    @id @default(autoincrement())
+    transactionHash String @unique @map("transaction_hash")
+    from            String
+    to              String
+    types           Int
+    ni              String
+    ri              String
+    blockNum        Int
+    gas             Int
+    originalHashA   String
+    originalHashB   String
 
     @@index([from, to, types], name: "idx_reupload_num")
 }
 
 // 定义 `App2RelayEvent` 表
 model App2RelayEvent {
-    id        Int      @id @default(autoincrement()) // 自动生成的主键
-    from      String   @map("from_address") // 发送方地址
-    relay     String   @map("relay_address") // 中继地址
-    data      String // 事件中的数据
-    dataHash  String   @unique @map("data_hash") // 数据哈希值
-    dataIndex Int // 数据索引
-    lastRelay Boolean // 是否为最后一个中继
-    blockNum  Int
-    createdAt DateTime @default(now()) // 事件的记录时间
+    id              Int     @id @default(autoincrement()) // 自动生成的主键
+    transactionHash String  @unique @map("transaction_hash") // 交易哈希
+    from            String  @map("from_address") // 发送方地址
+    relay           String  @map("relay_address") // 中继地址
+    data            String // 事件中的数据
+    dataHash        String  @map("data_hash") // 数据哈希值
+    dataIndex       Int // 数据索引
+    lastRelay       Boolean // 是否为最后一个中继
+    blockNum        Int
+    gas             Int
 }
 
 // 定义 `Pre2NextEvent` 表
 model Pre2NextEvent {
-    id        Int      @id @default(autoincrement()) // 自动生成的主键
-    from      String   @map("from_address") // 发送方地址
-    relay     String   @map("relay_address") // 中继地址
-    data      String // 事件中的数据
-    dataHash  String   @map("data_hash")
-    dataIndex Int // 数据索引
-    blockNum  Int
-    createdAt DateTime @default(now()) // 事件的记录时间
-
-    @@unique([from, relay, dataIndex, dataHash]) // 组合唯一键
+    id              Int    @id @default(autoincrement()) // 自动生成的主键
+    transactionHash String @unique @map("transaction_hash")
+    from            String @map("from_address") // 发送方地址
+    relay           String @map("relay_address") // 中继地址
+    data            String // 事件中的数据
+    dataHash        String @map("data_hash")
+    dataIndex       Int // 数据索引
+    blockNum        Int
+    gas             Int
 }
 
 // 定义 `RelayResEvidenceEvent` 表
 model RelayResEvidenceEvent {
-    id               Int      @id @default(autoincrement()) // 自动生成的主键
-    relayRealAccount String   @map("relay_real_account") // 中继真实账户
-    appTempAccount   String   @map("app_temp_account") // 应用临时账户
+    id               Int    @id @default(autoincrement()) // 自动生成的主键
+    transactionHash  String @unique @map("transaction_hash")
+    relayRealAccount String @map("relay_real_account") // 中继真实账户
+    appTempAccount   String @map("app_temp_account") // 应用临时账户
     data             String // 事件中的数据
-    dataHash         String   @unique @map("data_hash")
-    responseEvidence String   @map("response_evidence")
+    dataHash         String @map("data_hash")
+    responseEvidence String @map("response_evidence")
     chainIndex       Int // 链索引
     blockNum         Int
-    createdAt        DateTime @default(now()) // 事件的记录时间
+    gas              Int
 }

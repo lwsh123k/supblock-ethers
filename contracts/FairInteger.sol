@@ -36,7 +36,6 @@ contract FairInteger {
 		bytes32 infoHashA,
 		uint256 tA,
 		uint256 tB,
-		uint256 uploadTime,
 		uint256 index
 	);
 	event ResHashUpload(
@@ -45,29 +44,29 @@ contract FairInteger {
 		bytes32 infoHashB,
 		uint256 tA,
 		uint256 tB,
-		uint256 uploadTime,
 		uint256 index
 	);
-	// 随机数上传事件
+	// 随机数上传事件, from为applicant, to为relay
 	event ReqInfoUpload(
 		address indexed from,
 		address indexed to,
 		uint256 ni,
 		uint256 ri,
 		uint256 tA,
+		uint256 tB,
 		bytes32 hashA,
-		uint256 uploadTime,
-		uint256 tB
+		bytes32 hashB
 	);
+	// from为relay, to为applicant
 	event ResInfoUpload(
 		address indexed from,
 		address indexed to,
 		uint256 ni,
 		uint256 ri,
+		uint256 tA,
 		uint256 tB,
-		bytes32 hashB,
-		uint256 uploadTime,
-		uint256 tA
+		bytes32 hashA,
+		bytes32 hashB
 	);
 	// 随机数重传
 	event ReqReuploadNum(
@@ -75,16 +74,16 @@ contract FairInteger {
 		address indexed to,
 		uint ni,
 		uint ri,
-		bytes32 originalHash,
-		uint256 uploadTime
+		bytes32 originalHashA,
+		bytes32 originalHashB
 	);
 	event ResReuploadNum(
 		address indexed from,
 		address indexed to,
 		uint ni,
 		uint ri,
-		bytes32 originalHash,
-		uint256 uploadTime
+		bytes32 originalHashA,
+		bytes32 originalHashB
 	);
 
 	// 账户激活
@@ -189,7 +188,6 @@ contract FairInteger {
 			mHash,
 			integerInfo.tA,
 			integerInfo.tB,
-			block.timestamp,
 			personalInteger[msg.sender][receiver].length - 1
 		);
 	}
@@ -212,15 +210,7 @@ contract FairInteger {
 		personalInteger[sender][msg.sender][len - 1].hashTb = block.timestamp;
 		// 记录索引
 		hashIndex[mHash] = hashIndexStruct({ req: sender, res: msg.sender, index: len });
-		emit ResHashUpload(
-			msg.sender,
-			sender,
-			mHash,
-			integerInfo.tA,
-			integerInfo.tB,
-			block.timestamp,
-			len - 1
-		);
+		emit ResHashUpload(msg.sender, sender, mHash, integerInfo.tA, integerInfo.tB, len - 1);
 	}
 
 	// 请求者公开ni, ri.
@@ -253,9 +243,9 @@ contract FairInteger {
 			ni,
 			ri,
 			integerInfo.tA,
+			integerInfo.tB,
 			integerInfo.infoHashA,
-			block.timestamp,
-			integerInfo.tB
+			integerInfo.infoHashB
 		);
 	}
 
@@ -288,10 +278,10 @@ contract FairInteger {
 			sender,
 			ni,
 			ri,
+			integerInfo.tA,
 			integerInfo.tB,
-			integerInfo.infoHashB,
-			block.timestamp,
-			integerInfo.tA
+			integerInfo.infoHashA,
+			integerInfo.infoHashB
 		);
 	}
 
@@ -430,7 +420,7 @@ contract FairInteger {
 				ni,
 				ri,
 				personalInteger[msg.sender][to][index].infoHashA,
-				block.timestamp
+				personalInteger[msg.sender][to][index].infoHashB
 			);
 		}
 		// 响应者重传
@@ -451,8 +441,8 @@ contract FairInteger {
 				to,
 				ni,
 				ri,
-				personalInteger[to][msg.sender][index].infoHashB,
-				block.timestamp
+				personalInteger[to][msg.sender][index].infoHashA,
+				personalInteger[to][msg.sender][index].infoHashB
 			);
 		}
 	}

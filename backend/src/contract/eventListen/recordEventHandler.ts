@@ -3,40 +3,35 @@ import { logger } from '../../util/logger';
 import { PrismaClient } from '@prisma/client';
 import { sendPluginMessage } from '../../socket/handlePluginMessage';
 import { sendRelayInfo } from '../../socket/handleRelayInfo';
+import { Pre2NextEventEventObject } from '../types/StoreData';
+import {
+    ReqHashUploadEventObject,
+    ReqInfoUploadEventObject,
+    ReqReuploadNumEventObject,
+    ResHashUploadEventObject,
+    ResInfoUploadEventObject,
+    ResReuploadNumEventObject,
+} from '../types/FairInteger';
 
 const prisma = new PrismaClient();
 
 // req hash
 export async function handleReqHashUpload(
-    args: ethers.utils.Result,
+    txHash: string,
+    args: ReqHashUploadEventObject,
     blockNumber: number,
     gasUsed: ethers.BigNumber
 ) {
-    let { from, to, infoHashA, tA, tB, uploadTime, index } = args;
-    let res = await prisma.uploadHash.upsert({
-        where: {
-            infoHash: infoHashA,
-        },
-        update: {
+    let { from, to, infoHashA, tA, tB, index } = args;
+    let res = await prisma.uploadHash.create({
+        data: {
+            transactionHash: txHash,
             from: from,
             to: to,
             types: 0,
             infoHash: infoHashA,
             tA: tA.toString(),
             tB: tB.toString(),
-            timestamp: new Date(uploadTime.mul(1000).toNumber()),
-            index: index.toString(),
-            blockNum: blockNumber,
-            gas: gasUsed.toNumber(),
-        },
-        create: {
-            from: from,
-            to: to,
-            types: 0,
-            infoHash: infoHashA,
-            tA: tA.toString(),
-            tB: tB.toString(),
-            timestamp: new Date(uploadTime.mul(1000).toNumber()),
             index: index.toString(),
             blockNum: blockNumber,
             gas: gasUsed.toNumber(),
@@ -47,35 +42,21 @@ export async function handleReqHashUpload(
 
 // res hash
 export async function handleResHashUpload(
-    args: ethers.utils.Result,
+    txHash: string,
+    args: ResHashUploadEventObject,
     blockNumber: number,
     gasUsed: ethers.BigNumber
 ) {
-    let { from, to, infoHashB: infoHash, tA, tB, uploadTime, index } = args;
-    let res = await prisma.uploadHash.upsert({
-        where: {
-            infoHash: infoHash,
-        },
-        update: {
+    let { from, to, infoHashB: infoHash, tA, tB, index } = args;
+    let res = await prisma.uploadHash.create({
+        data: {
+            transactionHash: txHash,
             from: from,
             to: to,
             types: 1,
             infoHash: infoHash,
             tA: tA.toString(),
             tB: tB.toString(),
-            timestamp: new Date(uploadTime.mul(1000).toNumber()),
-            index: index.toString(),
-            blockNum: blockNumber,
-            gas: gasUsed.toNumber(),
-        },
-        create: {
-            from: from,
-            to: to,
-            types: 1,
-            infoHash: infoHash,
-            tA: tA.toString(),
-            tB: tB.toString(),
-            timestamp: new Date(uploadTime.mul(1000).toNumber()),
             index: index.toString(),
             blockNum: blockNumber,
             gas: gasUsed.toNumber(),
@@ -86,250 +67,173 @@ export async function handleResHashUpload(
 
 // req num
 export async function handleReqInfoUpload(
-    args: ethers.utils.Result,
+    txHash: string,
+    args: ReqInfoUploadEventObject,
     blockNumber: number,
     gasUsed: ethers.BigNumber
 ) {
-    let { from, to, ni, ri, tA, hashA: numHash, uploadTime, tB } = args;
+    let { from, to, ni, ri, tA, hashA: numHashA, hashB: numHashB, tB } = args;
     // 判断自己随机数正确性
     const hash = ethers.utils.solidityKeccak256(
         ['uint256', 'uint256', 'uint256', 'uint256'],
         [ni, tA, tB, ri]
     );
-    let iscorrect = hash === numHash;
-    logger.info(`applicant try to upload num to database (num hash: ${hash})`);
+    let iscorrect = hash === numHashA;
+    // logger.info(`applicant try to upload num to database (num hash: ${hash})`);
     // 上传信息
-    let res = await prisma.uploadNum.upsert({
-        where: {
-            numHash: numHash,
-        },
-        create: {
+    let res = await prisma.uploadNum.create({
+        data: {
+            transactionHash: txHash,
             from: from,
             to: to,
             types: 0,
             ni: ni.toString(),
             ri: ri.toHexString(),
             t: tA.toString(),
-            numHash: numHash,
-            timestamp: new Date(uploadTime.mul(1000).toNumber()),
-            blockNum: blockNumber,
-            gas: gasUsed.toNumber(),
-            correctness: iscorrect,
-        },
-        update: {
-            from: from,
-            to: to,
-            types: 0,
-            ni: ni.toString(),
-            ri: ri.toHexString(),
-            t: tA.toString(),
-            numHash: numHash,
-            timestamp: new Date(uploadTime.mul(1000).toNumber()),
+            numHashA,
+            numHashB,
             blockNum: blockNumber,
             gas: gasUsed.toNumber(),
             correctness: iscorrect,
         },
     });
-    // 查询另一方是否正确
-    let other = await prisma.uploadHash.findFirst({
-        where: { from: to, to: from },
-        include: { uploadNum: true },
+    // 查询另一方是否正确, 倒序查找满足条件的第一个
+    let other = await prisma.uploadNum.findFirst({
+        where: { from: to, to: from, numHashB },
         orderBy: {
             id: 'desc',
         },
     });
-    logger.info({ correctness: iscorrect }, 'applicant random number successfully upload');
-    // console.log(iscorrect, other);
+    logger.info(
+        { 'applicant hash': hash, correctness: iscorrect, 'relay tx info': other },
+        'applicant upload random number'
+    );
+
     // 如果都正确, 通知extension打开新页面;
     // 没办法知道请求者和响应者谁先上传, 所以都会调用sendPluginMessage, 然后在函数中判断只触发一次
-    if (iscorrect && other?.uploadNum?.correctness) {
-        sendPluginMessage(from, to, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 99, hash);
-        await sendRelayInfo(from, to, (ni.toNumber() + Number(other?.uploadNum?.ni)) % 99, hash);
+    if (iscorrect && other?.correctness) {
+        sendPluginMessage(from, to, (ni.toNumber() + Number(other?.ni)) % 99, hash);
+        await sendRelayInfo(from, to, (ni.toNumber() + Number(other?.ni)) % 99, hash);
     }
 }
 
 // res num
 export async function handleResInfoUpload(
-    args: ethers.utils.Result,
+    txHash: string,
+    args: ResInfoUploadEventObject,
     blockNumber: number,
     gasUsed: ethers.BigNumber
 ) {
-    let { from, to, ni, ri, tB, hashB: numHash, uploadTime, tA } = args;
+    let { from, to, ni, ri, tB, hashA: numHashA, hashB: numHashB, tA } = args;
     // 判断自己随机数正确性
     const hash = ethers.utils.solidityKeccak256(
         ['uint256', 'uint256', 'uint256', 'uint256'],
         [ni, tA, tB, ri]
     );
-    let iscorrect = hash === numHash;
-    logger.info(`relay try to upload num to database (num hash: ${hash})`);
+    let iscorrect = hash === numHashB;
+    // logger.info(`relay try to upload num to database (num hash: ${hash})`);
     // 上传随机数
-    let res = await prisma.uploadNum.upsert({
-        where: {
-            numHash: numHash,
-        },
-        create: {
+    let res = await prisma.uploadNum.create({
+        data: {
+            transactionHash: txHash,
             from: from,
             to: to,
             types: 1,
             ni: ni.toString(),
             ri: ri.toHexString(),
             t: tB.toString(),
-            numHash: numHash,
-            timestamp: new Date(uploadTime.mul(1000).toNumber()),
-            blockNum: blockNumber,
-            gas: gasUsed.toNumber(),
-            correctness: iscorrect,
-        },
-        update: {
-            from: from,
-            to: to,
-            types: 1,
-            ni: ni.toString(),
-            ri: ri.toHexString(),
-            t: tB.toString(),
-            numHash: numHash,
-            timestamp: new Date(uploadTime.mul(1000).toNumber()),
+            numHashA,
+            numHashB,
             blockNum: blockNumber,
             gas: gasUsed.toNumber(),
             correctness: iscorrect,
         },
     });
     // 查询另一方是否正确
-    let other = await prisma.uploadHash.findFirst({
-        where: { from: to, to: from },
-        include: { uploadNum: true },
+    let other = await prisma.uploadNum.findFirst({
+        where: { from: to, to: from, numHashA },
         orderBy: {
             id: 'desc',
         },
     });
 
-    logger.info({ correctness: iscorrect }, `relay random number successfully upload`);
-    // console.log(iscorrect, other);
-    if (iscorrect && other?.uploadNum?.correctness) {
-        sendPluginMessage(
-            to,
-            from,
-            (ni.toNumber() + Number(other?.uploadNum?.ni)) % 99,
-            other.infoHash
-        );
-        await sendRelayInfo(
-            to,
-            from,
-            (ni.toNumber() + Number(other?.uploadNum?.ni)) % 99,
-            other.infoHash
-        );
+    logger.info(
+        { 'relay hash': hash, correctness: iscorrect, 'applicant tx info': other },
+        `relay random number successfully upload`
+    );
+    if (iscorrect && other?.correctness) {
+        sendPluginMessage(to, from, (ni.toNumber() + Number(other?.ni)) % 99, numHashA);
+        await sendRelayInfo(to, from, (ni.toNumber() + Number(other?.ni)) % 99, numHashA);
     }
 }
 
 // req reupload
 export async function handleResReuploadNum(
-    args: ethers.utils.Result,
+    txHash: string,
+    args: ReqReuploadNumEventObject,
     blockNumber: number,
     gasUsed: ethers.BigNumber
 ) {
-    let { from, to, ni, ri, originalHash, uploadTime } = args;
-    let res = await prisma.reuploadNum.upsert({
-        where: {
-            originalHash: originalHash,
-        },
-        create: {
+    let { from, to, ni, ri, originalHashA, originalHashB } = args;
+    let res = await prisma.reuploadNum.create({
+        data: {
+            transactionHash: txHash,
             from: from,
             to: to,
             types: 0,
             ni: ni.toString(),
             ri: ri.toHexString(),
-            originalHash: originalHash,
-            timestamp: new Date(uploadTime.mul(1000).toNumber()),
-            blockNum: blockNumber,
-            gas: gasUsed.toNumber(),
-        },
-        update: {
-            from: from,
-            to: to,
-            types: 0,
-            ni: ni.toString(),
-            ri: ri.toHexString(),
-            originalHash: originalHash,
-            timestamp: new Date(uploadTime.mul(1000).toNumber()),
+            originalHashA,
+            originalHashB,
             blockNum: blockNumber,
             gas: gasUsed.toNumber(),
         },
     });
     logger.info({ ni: res.ni }, 'applicant random number reupload');
-    sendPluginMessage(from, to, ni.toNumber() % 99, originalHash);
-    await sendRelayInfo(from, to, ni.toNumber() % 99, originalHash);
+    sendPluginMessage(from, to, ni.toNumber() % 99, originalHashA);
+    await sendRelayInfo(from, to, ni.toNumber() % 99, originalHashA);
 }
 
 // res reupload
 export async function handleReqReuploadNum(
-    args: ethers.utils.Result,
+    txHash: string,
+    args: ResReuploadNumEventObject,
     blockNumber: number,
     gasUsed: ethers.BigNumber
 ) {
-    let { from, to, ni, ri, originalHash, uploadTime } = args;
-    let res = await prisma.reuploadNum.upsert({
-        where: {
-            originalHash: originalHash,
-        },
-        create: {
+    let { from, to, ni, ri, originalHashA, originalHashB } = args;
+    let res = await prisma.reuploadNum.create({
+        data: {
+            transactionHash: txHash,
             from: from,
             to: to,
             types: 1,
             ni: ni.toString(),
             ri: ri.toHexString(),
-            originalHash: originalHash,
-            timestamp: new Date(uploadTime.mul(1000).toNumber()),
+            originalHashA,
+            originalHashB,
             blockNum: blockNumber,
             gas: gasUsed.toNumber(),
-        },
-        update: {
-            from: from,
-            to: to,
-            types: 1,
-            ni: ni.toString(),
-            ri: ri.toHexString(),
-            originalHash: originalHash,
-            timestamp: new Date(uploadTime.mul(1000).toNumber()),
-            blockNum: blockNumber,
-            gas: gasUsed.toNumber(),
-        },
-    });
-    // find applicant's hash through from and to
-    let findResult = await prisma.uploadHash.findFirst({
-        where: { from: to, to: from },
-        select: {
-            infoHash: true,
-        },
-        orderBy: {
-            id: 'desc',
         },
     });
 
     logger.info({ ni: res.ni }, 'relay random number reupload');
-    sendPluginMessage(to, from, ni.toNumber() % 99, findResult?.infoHash!);
-    await sendRelayInfo(to, from, ni.toNumber() % 99, findResult?.infoHash!);
+    sendPluginMessage(to, from, ni.toNumber() % 99, originalHashA);
+    await sendRelayInfo(to, from, ni.toNumber() % 99, originalHashA);
 }
 
 // 处理 App2RelayEvent
 export async function handleApp2RelayEvent(
+    txHash: string,
     args: ethers.utils.Result,
     blockNumber: number,
     gasUsed: ethers.BigNumber
 ) {
     const { from, relay, data, dataHash, dataIndex, lastRelay } = args;
     let dataIndexNumber = dataIndex.toNumber();
-    await prisma.app2RelayEvent.upsert({
-        where: { dataHash }, // 使用 dataHash 作为唯一标识来查找是否已有该事件
-        update: {
-            from,
-            relay,
-            data,
-            dataIndex: dataIndexNumber,
-            lastRelay,
-            blockNum: blockNumber,
-            createdAt: new Date(), // 更新事件的记录时间
-        },
-        create: {
+    await prisma.app2RelayEvent.create({
+        data: {
+            transactionHash: txHash,
             from,
             relay,
             data,
@@ -337,7 +241,7 @@ export async function handleApp2RelayEvent(
             dataIndex: dataIndexNumber,
             lastRelay,
             blockNum: blockNumber,
-            createdAt: new Date(),
+            gas: gasUsed.toNumber(),
         },
     });
 
@@ -349,42 +253,29 @@ export async function handleApp2RelayEvent(
         dataIndex: dataIndexNumber,
         lastRelay,
         blockNumber,
-        gasUsed,
+        gas: gasUsed.toNumber(),
     });
-    // 可以将数据存入数据库，或执行其他业务逻辑
 }
 
 // 处理 Pre2NextEvent
 export async function handlePre2NextEvent(
-    args: ethers.utils.Result,
+    txHash: string, // tx hash
+    args: Pre2NextEventEventObject, // 使用 TypeChain 生成的类型
     blockNumber: number,
     gasUsed: ethers.BigNumber
 ) {
     const { from, relay, data, dataHash, dataIndex } = args;
     let dataIndexNumber = dataIndex.toNumber();
-    await prisma.pre2NextEvent.upsert({
-        where: {
-            from_relay_dataIndex_dataHash: {
-                // 将组合唯一键封装为对象
-                from,
-                relay,
-                dataIndex: dataIndexNumber,
-                dataHash,
-            },
-        },
-        update: {
-            data,
-            blockNum: blockNumber,
-            createdAt: new Date(), // 更新事件的记录时间
-        },
-        create: {
+    await prisma.pre2NextEvent.create({
+        data: {
+            transactionHash: txHash,
             from,
             relay,
             data,
             dataHash,
             dataIndex: dataIndexNumber,
             blockNum: blockNumber,
-            createdAt: new Date(),
+            gas: gasUsed.toNumber(),
         },
     });
     console.log('Pre2NextEvent detected:', {
@@ -394,28 +285,21 @@ export async function handlePre2NextEvent(
         dataHash,
         dataIndex: dataIndexNumber,
         blockNumber,
-        gasUsed: gasUsed.toNumber(),
+        gas: gasUsed.toNumber(),
     });
 }
 
 // 处理 RelayResEvidenceEvent
 export async function handleRelayResEvidenceEvent(
+    txHash: string,
     args: ethers.utils.Result,
     blockNumber: number,
     gasUsed: ethers.BigNumber
 ) {
     const { relayRealAccount, appTempAccount, data, dataHash, responseEvidence, chainIndex } = args;
-    await prisma.relayResEvidenceEvent.upsert({
-        where: { dataHash }, // 使用 dataHash 作为唯一标识来查找是否已有该事件
-        update: {
-            relayRealAccount,
-            appTempAccount,
-            data,
-            chainIndex,
-            blockNum: blockNumber,
-            createdAt: new Date(), // 更新事件的记录时间
-        },
-        create: {
+    await prisma.relayResEvidenceEvent.create({
+        data: {
+            transactionHash: txHash,
             relayRealAccount,
             appTempAccount,
             data,
@@ -423,7 +307,7 @@ export async function handleRelayResEvidenceEvent(
             responseEvidence,
             chainIndex,
             blockNum: blockNumber,
-            createdAt: new Date(),
+            gas: gasUsed.toNumber(),
         },
     });
     console.log('RelayResEvidenceEvent detected:', {
@@ -434,6 +318,6 @@ export async function handleRelayResEvidenceEvent(
         responseEvidence,
         chainIndex,
         blockNumber,
-        gasUsed: gasUsed.toNumber(),
+        gas: gasUsed.toNumber(),
     });
 }

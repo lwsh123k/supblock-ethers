@@ -22,7 +22,7 @@ export async function validatorListen(
 ) {
     // validator监听applicant hash上传, 之后一次性上传hash, 随机数
     let hashFilter = fairIntGen.filters.ReqHashUpload(null, myAddress);
-    fairIntGen.on(hashFilter, async (from, to, infoHash, tA, tB, uploadTime, index) => {
+    fairIntGen.on(hashFilter, async (from, to, infoHash, tA, tB, index) => {
         applicantIndexMap.set(from, index.toNumber());
         // logger.info('validator event listen: hash upload from applicant')
         // console.log('hash upload from applicant', from, to, infoHash, tA, tB, uploadTime, index);
@@ -42,7 +42,7 @@ export async function validatorListen(
 
     // validator监听applicant random上传, 判断是否重传
     let filter = fairIntGen.filters.ReqInfoUpload(null, myAddress);
-    fairIntGen.on(filter, async (from, to, ni, ri, tA, hashA, uploadTime, tB) => {
+    fairIntGen.on(filter, async (from, to, ni, ri, tA, tB, hashA, hashB) => {
         // verify random num, 假设validator一定会上传正确的随机数
         try {
             let res = getHash(ni.toNumber(), tA.toNumber(), tB.toNumber(), ri.toString());
