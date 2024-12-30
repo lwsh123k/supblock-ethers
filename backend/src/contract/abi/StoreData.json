@@ -23,16 +23,6 @@
         "type": "bytes32",
         "name": "dataHash",
         "indexed": false
-      },
-      {
-        "type": "uint256",
-        "name": "dataIndex",
-        "indexed": false
-      },
-      {
-        "type": "bool",
-        "name": "lastRelay",
-        "indexed": false
       }
     ]
   },
@@ -57,13 +47,13 @@
         "indexed": false
       },
       {
-        "type": "bytes32",
-        "name": "dataHash",
+        "type": "bytes",
+        "name": "encryptedToken",
         "indexed": false
       },
       {
-        "type": "uint256",
-        "name": "dataIndex",
+        "type": "bytes32",
+        "name": "dataHash",
         "indexed": false
       }
     ]
@@ -75,7 +65,7 @@
     "inputs": [
       {
         "type": "address",
-        "name": "relayRealAccount",
+        "name": "relayAnonymousAccount",
         "indexed": true
       },
       {
@@ -95,39 +85,13 @@
       },
       {
         "type": "bytes32",
-        "name": "responseEvidence",
+        "name": "app2RelayResEvidence",
         "indexed": false
       },
       {
-        "type": "uint8",
-        "name": "chainIndex",
+        "type": "bytes32",
+        "name": "pre2NextResEvidence",
         "indexed": false
-      }
-    ]
-  },
-  {
-    "type": "function",
-    "name": "getData",
-    "constant": true,
-    "stateMutability": "view",
-    "payable": false,
-    "inputs": [
-      {
-        "type": "address",
-        "name": "sender"
-      },
-      {
-        "type": "address",
-        "name": "receiver"
-      },
-      {
-        "type": "uint256",
-        "name": "index"
-      }
-    ],
-    "outputs": [
-      {
-        "type": "bytes"
       }
     ]
   },
@@ -168,29 +132,6 @@
   },
   {
     "type": "function",
-    "name": "relayData",
-    "constant": true,
-    "stateMutability": "view",
-    "payable": false,
-    "inputs": [
-      {
-        "type": "address"
-      },
-      {
-        "type": "address"
-      },
-      {
-        "type": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "type": "bytes"
-      }
-    ]
-  },
-  {
-    "type": "function",
     "name": "setApp2Relay",
     "constant": false,
     "payable": false,
@@ -206,10 +147,6 @@
       {
         "type": "bytes32",
         "name": "dataHash"
-      },
-      {
-        "type": "bool",
-        "name": "lastRelay"
       }
     ],
     "outputs": []
@@ -227,6 +164,10 @@
       {
         "type": "bytes",
         "name": "data"
+      },
+      {
+        "type": "bytes",
+        "name": "encryptedToken"
       },
       {
         "type": "bytes32",
@@ -250,13 +191,13 @@
   },
   {
     "type": "function",
-    "name": "setTempAccountHash",
+    "name": "setRelay2App",
     "constant": false,
     "payable": false,
     "inputs": [
       {
         "type": "address",
-        "name": "appTempAccount"
+        "name": "preAppTempAccount"
       },
       {
         "type": "bytes",
@@ -268,11 +209,11 @@
       },
       {
         "type": "bytes32",
-        "name": "responseEvidence"
+        "name": "app2RelayResEvidence"
       },
       {
-        "type": "uint8",
-        "name": "chainIndex"
+        "type": "bytes32",
+        "name": "pre2NextResEvidence"
       }
     ],
     "outputs": []

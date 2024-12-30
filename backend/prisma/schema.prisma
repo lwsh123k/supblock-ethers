@@ -77,14 +77,12 @@ model ReuploadNum {
 
 // 定义 `App2RelayEvent` 表
 model App2RelayEvent {
-    id              Int     @id @default(autoincrement()) // 自动生成的主键
-    transactionHash String  @unique @map("transaction_hash") // 交易哈希
-    from            String  @map("from_address") // 发送方地址
-    relay           String  @map("relay_address") // 中继地址
+    id              Int    @id @default(autoincrement()) // 自动生成的主键
+    transactionHash String @unique @map("transaction_hash") // 交易哈希
+    from            String @map("from_address") // 发送方地址
+    relay           String @map("relay_address") // 中继地址
     data            String // 事件中的数据
-    dataHash        String  @map("data_hash") // 数据哈希值
-    dataIndex       Int // 数据索引
-    lastRelay       Boolean // 是否为最后一个中继
+    dataHash        String @map("data_hash") // 数据哈希值
     blockNum        Int
     gas             Int
 }
@@ -96,22 +94,22 @@ model Pre2NextEvent {
     from            String @map("from_address") // 发送方地址
     relay           String @map("relay_address") // 中继地址
     data            String // 事件中的数据
+    encryptedToken  String
     dataHash        String @map("data_hash")
-    dataIndex       Int // 数据索引
     blockNum        Int
     gas             Int
 }
 
 // 定义 `RelayResEvidenceEvent` 表
 model RelayResEvidenceEvent {
-    id               Int    @id @default(autoincrement()) // 自动生成的主键
-    transactionHash  String @unique @map("transaction_hash")
-    relayRealAccount String @map("relay_real_account") // 中继真实账户
-    appTempAccount   String @map("app_temp_account") // 应用临时账户
-    data             String // 事件中的数据
-    dataHash         String @map("data_hash")
-    responseEvidence String @map("response_evidence")
-    chainIndex       Int // 链索引
-    blockNum         Int
-    gas              Int
+    id                    Int    @id @default(autoincrement()) // 自动生成的主键
+    transactionHash       String @unique @map("transaction_hash")
+    relayAnonymousAccount String @map("relay_anonymous_account") // 中继匿名账户
+    appTempAccount        String @map("app_temp_account") // 应用临时账户
+    data                  String // 事件中的数据
+    dataHash              String @map("data_hash")
+    app2RelayResEvidence  String @map("app2_relay_response_evidence")
+    pre2NextResEvidence   String @map("pre2_next_response_evidence")
+    blockNum              Int
+    gas                   Int
 }

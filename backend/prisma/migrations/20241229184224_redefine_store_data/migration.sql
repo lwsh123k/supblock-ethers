@@ -69,8 +69,6 @@ CREATE TABLE "App2RelayEvent" (
     "relay_address" TEXT NOT NULL,
     "data" TEXT NOT NULL,
     "data_hash" TEXT NOT NULL,
-    "dataIndex" INTEGER NOT NULL,
-    "lastRelay" BOOLEAN NOT NULL,
     "blockNum" INTEGER NOT NULL,
     "gas" INTEGER NOT NULL
 );
@@ -82,8 +80,8 @@ CREATE TABLE "Pre2NextEvent" (
     "from_address" TEXT NOT NULL,
     "relay_address" TEXT NOT NULL,
     "data" TEXT NOT NULL,
+    "encryptedToken" TEXT NOT NULL,
     "data_hash" TEXT NOT NULL,
-    "dataIndex" INTEGER NOT NULL,
     "blockNum" INTEGER NOT NULL,
     "gas" INTEGER NOT NULL
 );
@@ -92,12 +90,12 @@ CREATE TABLE "Pre2NextEvent" (
 CREATE TABLE "RelayResEvidenceEvent" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "transaction_hash" TEXT NOT NULL,
-    "relay_real_account" TEXT NOT NULL,
+    "relay_anonymous_account" TEXT NOT NULL,
     "app_temp_account" TEXT NOT NULL,
     "data" TEXT NOT NULL,
     "data_hash" TEXT NOT NULL,
-    "response_evidence" TEXT NOT NULL,
-    "chainIndex" INTEGER NOT NULL,
+    "app2_relay_response_evidence" TEXT NOT NULL,
+    "pre2_next_response_evidence" TEXT NOT NULL,
     "blockNum" INTEGER NOT NULL,
     "gas" INTEGER NOT NULL
 );
