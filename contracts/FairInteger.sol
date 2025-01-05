@@ -96,7 +96,7 @@ contract FairInteger {
 	mapping(address => uint256) private executeTime;
 	// 记录每个用户上传的信息
 	mapping(address => mapping(address => IntegerInfo[])) private personalInteger;
-	// 记录上传信息hash的索引, hash要求唯一??
+	// 记录上传信息hash的索引, hash要求唯一
 	mapping(bytes32 => hashIndexStruct) internal hashIndex;
 
 	// 时间要求
@@ -209,7 +209,7 @@ contract FairInteger {
 		personalInteger[sender][msg.sender][len - 1].infoHashB = mHash;
 		personalInteger[sender][msg.sender][len - 1].hashTb = block.timestamp;
 		// 记录索引
-		hashIndex[mHash] = hashIndexStruct({ req: sender, res: msg.sender, index: len });
+		hashIndex[mHash] = hashIndexStruct({ req: sender, res: msg.sender, index: len - 1 });
 		emit ResHashUpload(msg.sender, sender, mHash, integerInfo.tA, integerInfo.tB, len - 1);
 	}
 
@@ -347,6 +347,12 @@ contract FairInteger {
 	) public view returns (IntegerInfo memory) {
 		uint256 lastIndex = personalInteger[sender][receiver].length - 1;
 		return personalInteger[sender][receiver][lastIndex];
+	}
+
+	// 通过hash获取选择的随机数
+	function getNumByHash(bytes32 infoHash) public view returns (IntegerInfo memory) {
+		hashIndexStruct memory data = hashIndex[infoHash];
+		return personalInteger[data.req][data.res][data.index];
 	}
 
 	// 第三阶段, 统一检查

@@ -7,29 +7,31 @@ import { writeFair, writeStoreData } from '../contract/eventListen/validatorList
 import eccBlind from './eccBlind';
 import { AppToRelayData, PreToNextRelayData, NumInfo, ValidatorSendBackSig } from './types';
 import {
-    addApp2ValidatorData,
+    saveApp2ValidatorInitData,
     app2ValidatorData,
     hashToBMapping,
     onlineUsers,
     userSig,
+    saveApp2ValidatorFinalData,
+    saveRelay2ValidatorFinalData,
 } from './usersData';
-import { getAccountInfoByContract } from '../contract/util/getAccountById';
+import { getAccountInfoByContract } from '../contract/util/getOnChainData';
 
 // 申请盲签名（必须每次都要点chain init, 两个功能: 盲签名和验证正向hash）. validator listening applicant: chain init
 let validatorSendBackData = new Map<string, ValidatorSendBackSig>();
-export function handleChainInit(socket: Socket, data: AppToRelayData) {
+export async function handleChainInit(socket: Socket, data: AppToRelayData) {
     logger.info('applicant to validator: initialization data');
     // verify data
     let { from, to, r, hf, hb, b, c, chainIndex } = data;
-    if (!from || !r || !hf) {
+    if (from == null || to == null || r == null || hf == null || b == null || r == null) {
         logger.error('applicant to validator: initialization data, data lack error');
         return;
     }
-    let result = verifyHashForward(from!, r!, hf!, null);
+    let result = verifyHashForward(from, r, hf, null);
 
     // if right, save and send back to applicant
     if (result) {
-        addApp2ValidatorData(from, data, chainIndex);
+        await saveApp2ValidatorInitData(from, data, chainIndex);
         // whether it's signed or not
         if (!userSig.has(from)) {
             let eccPoint = eccBlind.getPublicKey();
@@ -61,8 +63,7 @@ export function handleChainInit(socket: Socket, data: AppToRelayData) {
     }
 }
 
-// validaor 监听来自插件的信息: 当新页面打开时, 给下一个relay的匿名账户发送信息
-const prisma = new PrismaClient();
+// validaor -> next relay: 监听来自插件的信息: 当新页面打开时, 给下一个relay的匿名账户发送信息
 export async function handleValidator2Next(socket: Socket, data: NumInfo) {
     logger.info(
         `hash of applicant: ${data.hashOfApplicant}`,
@@ -73,13 +74,13 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
 
     // 区分哪一条链
     let bAndl = hashToBMapping.get(hashOfApplicant);
-    if (!bAndl) {
+    if (bAndl == null) {
         logger.error(`hash of applicant: ${hashOfApplicant}, can not found bAndl`);
         return;
     }
     let chainId = bAndl.chainId;
     let dataFromApplicantArray = app2ValidatorData.get(applicant);
-    if (!dataFromApplicantArray) {
+    if (dataFromApplicantArray == null) {
         logger.error(
             `applicant address: ${applicant}, chain id: ${chainId}, can not found data from applicant array`
         );
@@ -87,7 +88,7 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
     }
     let dataFromApplicant = dataFromApplicantArray[chainId];
     let token = userSig.get(applicant)?.t_array[chainId];
-    if (!token) {
+    if (token == null) {
         logger.error(
             `applicant address: ${applicant}, chain id: ${chainId}, can not found token in usersig`
         );
@@ -96,24 +97,11 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
 
     if (dataFromApplicant) {
         let { hf, hb, b } = dataFromApplicant;
-        if (!hf || !hb || !b) {
+        if (hf == null || hb == null || b == null) {
             logger.error(dataFromApplicant, 'hf or hb or b is is empty');
             throw new Error('hf or hb or b is is empty');
         }
         try {
-            // 此处applicant temp account为applicant real name account
-            // let appTempAccount = dataFromApplicant.from;
-            // let appTempAccountPubkey = await prisma.supBlock.findFirst({
-            //     where: {
-            //         address: appTempAccount!,
-            //     },
-            //     select: {
-            //         publicKey: true,
-            //     },
-            // });
-            // let token = '3333333333333333333333333333333333333333333333333333333333333333';
-            // let encryptedToken = await getEncryptData(appTempAccountPubkey?.publicKey!, token);
-
             // 查找下一个relay的匿名账户
             let nextRelayAnonymousAccount = await getAccountInfoByContract(blindedFairIntNum);
             if (nextRelayAnonymousAccount === null)
@@ -127,7 +115,7 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
                 hb,
                 b,
                 n: blindedFairIntNum,
-                t: token!,
+                t: token,
                 l: 0, // validator's relay index is 0
             };
             data.to = nextRelayAnonymousAccount.address;
@@ -135,11 +123,13 @@ export async function handleValidator2Next(socket: Socket, data: NumInfo) {
             let relayDataHash = keccak256(JSON.stringify(data));
             relayDataHash = ensure0xPrefix(relayDataHash);
             let encryptedData = await getEncryptData(nextRelayAnonymousAccount.publicKey, data);
+            let tokenHash = keccak256(token);
 
             // upload to blockchain
             await writeStoreData.setPre2Next(
                 nextRelayAnonymousAccount.address,
                 encryptedData,
+                tokenHash,
                 relayDataHash
             );
             logger.info('validator sends token to first relay: data upload success');
@@ -165,11 +155,13 @@ export async function handleFinalData(
     // save data from applicant or previous relay
     let verifyResult = undefined;
     if (typeof data === 'object' && data !== null && 'appTempAccount' in data) {
-        finalAllAppToValidatorData.push(data);
+        finalAllAppToValidatorData.push(data); // 保存到内存
+        await saveApp2ValidatorFinalData(data); // 保存到数据库
         verifyResult = await verifyData(data, null); // verify data
         console.log('receive final data from app: ', data);
     } else {
         finalAllPreToValidatorData.push(data);
+        await saveRelay2ValidatorFinalData(data);
         verifyResult = await verifyData(null, data); // verify data
         console.log('receive final data from previous relay: ', data);
     }

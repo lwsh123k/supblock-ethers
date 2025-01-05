@@ -60,9 +60,12 @@ export function generateRandomBytes(length: number) {
     return ethers.utils.hexlify(randomBytes);
 }
 
-// 使用对方公钥加密
-// 加密: 传入对象, 将对象 -> json字符串 -> 加密对象 -> 字符串
-// 返回的16进制加上0x前缀(grpc: binding number, r)
+/**
+ * 用接收方公钥加密数据
+ * @param publicKey 接收方公钥, 带不带0x都可以
+ * @param data 传入对象, 将对象 -> json字符串 -> 加密对象 -> 字符串
+ * @returns 0x + 16进制加密数据(grpc: binding number, r)
+ */
 export async function getEncryptData(publicKey: string, data: any) {
     // publicKey: 不带0x
     const removedPrefixpublicKey = publicKey.startsWith('0x') ? publicKey.slice(2) : publicKey;
@@ -87,12 +90,16 @@ export async function getDecryptData(privateKey: string, encryptedData: string) 
     return data;
 }
 
-// 对任意个数的参数取hash
+/**
+ * 对任意个数的参数取hash
+ * @param args 任意string参数
+ * @returns 带0x前缀的hash
+ */
 export function keccak256(...args: string[]) {
     const hash = keccak256Hash.create();
     for (let arg of args) hash.update(arg.toString());
     const result = hash.hex();
-    return result;
+    return ensure0xPrefix(result);
 }
 
 export function sha256Hash(...args: string[]) {

@@ -2,8 +2,12 @@ import { ethers } from 'ethers';
 import { logger } from '../../util/logger';
 import { PrismaClient } from '@prisma/client';
 import { sendPluginMessage } from '../../socket/handlePluginMessage';
-import { sendRelayInfo } from '../../socket/handleRelayInfo';
-import { Pre2NextEventEventObject } from '../types/StoreData';
+import { sendRelayInfo } from '../../socket/monitorRelayInfo';
+import {
+    App2RelayEventEventObject,
+    Pre2NextEventEventObject,
+    RelayResEvidenceEventEventObject,
+} from '../types/StoreData';
 import {
     ReqHashUploadEventObject,
     ReqInfoUploadEventObject,
@@ -225,12 +229,11 @@ export async function handleReqReuploadNum(
 // 处理 App2RelayEvent
 export async function handleApp2RelayEvent(
     txHash: string,
-    args: ethers.utils.Result,
+    args: App2RelayEventEventObject,
     blockNumber: number,
     gasUsed: ethers.BigNumber
 ) {
-    const { from, relay, data, dataHash, dataIndex, lastRelay } = args;
-    let dataIndexNumber = dataIndex.toNumber();
+    const { from, relay, data, dataHash, infoHash } = args;
     await prisma.app2RelayEvent.create({
         data: {
             transactionHash: txHash,
@@ -238,8 +241,7 @@ export async function handleApp2RelayEvent(
             relay,
             data,
             dataHash,
-            dataIndex: dataIndexNumber,
-            lastRelay,
+            infoHash,
             blockNum: blockNumber,
             gas: gasUsed.toNumber(),
         },
@@ -250,8 +252,7 @@ export async function handleApp2RelayEvent(
         relay,
         data,
         dataHash,
-        dataIndex: dataIndexNumber,
-        lastRelay,
+        infoHash,
         blockNumber,
         gas: gasUsed.toNumber(),
     });
@@ -264,8 +265,7 @@ export async function handlePre2NextEvent(
     blockNumber: number,
     gasUsed: ethers.BigNumber
 ) {
-    const { from, relay, data, dataHash, dataIndex } = args;
-    let dataIndexNumber = dataIndex.toNumber();
+    const { from, relay, data, dataHash, tokenHash } = args;
     await prisma.pre2NextEvent.create({
         data: {
             transactionHash: txHash,
@@ -273,7 +273,7 @@ export async function handlePre2NextEvent(
             relay,
             data,
             dataHash,
-            dataIndex: dataIndexNumber,
+            tokenHash,
             blockNum: blockNumber,
             gas: gasUsed.toNumber(),
         },
@@ -283,7 +283,7 @@ export async function handlePre2NextEvent(
         relay,
         data,
         dataHash,
-        dataIndex: dataIndexNumber,
+        tokenHash,
         blockNumber,
         gas: gasUsed.toNumber(),
     });
@@ -292,31 +292,40 @@ export async function handlePre2NextEvent(
 // 处理 RelayResEvidenceEvent
 export async function handleRelayResEvidenceEvent(
     txHash: string,
-    args: ethers.utils.Result,
+    args: RelayResEvidenceEventEventObject,
     blockNumber: number,
     gasUsed: ethers.BigNumber
 ) {
-    const { relayRealAccount, appTempAccount, data, dataHash, responseEvidence, chainIndex } = args;
+    const {
+        relayAnonymousAccount,
+        appTempAccount,
+        data,
+        dataHash,
+        app2RelayResEvidence,
+        pre2NextResEvidence,
+        infoHash,
+    } = args;
     await prisma.relayResEvidenceEvent.create({
         data: {
             transactionHash: txHash,
-            relayRealAccount,
+            relayAnonymousAccount,
             appTempAccount,
             data,
             dataHash,
-            responseEvidence,
-            chainIndex,
+            app2RelayResEvidence,
+            pre2NextResEvidence,
+            infoHash,
             blockNum: blockNumber,
             gas: gasUsed.toNumber(),
         },
     });
     console.log('RelayResEvidenceEvent detected:', {
-        relayRealAccount,
+        relayAnonymousAccount,
         appTempAccount,
         data,
         dataHash,
-        responseEvidence,
-        chainIndex,
+        app2RelayResEvidence,
+        pre2NextResEvidence,
         blockNumber,
         gas: gasUsed.toNumber(),
     });

@@ -23,6 +23,11 @@
         "type": "bytes32",
         "name": "dataHash",
         "indexed": false
+      },
+      {
+        "type": "bytes32",
+        "name": "infoHash",
+        "indexed": false
       }
     ]
   },
@@ -47,8 +52,8 @@
         "indexed": false
       },
       {
-        "type": "bytes",
-        "name": "encryptedToken",
+        "type": "bytes32",
+        "name": "tokenHash",
         "indexed": false
       },
       {
@@ -91,6 +96,11 @@
       {
         "type": "bytes32",
         "name": "pre2NextResEvidence",
+        "indexed": false
+      },
+      {
+        "type": "bytes32",
+        "name": "infoHash",
         "indexed": false
       }
     ]
@@ -147,6 +157,10 @@
       {
         "type": "bytes32",
         "name": "dataHash"
+      },
+      {
+        "type": "bytes32",
+        "name": "infoHash"
       }
     ],
     "outputs": []
@@ -166,8 +180,8 @@
         "name": "data"
       },
       {
-        "type": "bytes",
-        "name": "encryptedToken"
+        "type": "bytes32",
+        "name": "tokenHash"
       },
       {
         "type": "bytes32",
@@ -214,8 +228,29 @@
       {
         "type": "bytes32",
         "name": "pre2NextResEvidence"
+      },
+      {
+        "type": "bytes32",
+        "name": "infoHash"
       }
     ],
     "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "usedEvidence",
+    "constant": true,
+    "stateMutability": "view",
+    "payable": false,
+    "inputs": [
+      {
+        "type": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "bool"
+      }
+    ]
   }
 ]

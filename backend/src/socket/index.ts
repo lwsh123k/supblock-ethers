@@ -75,8 +75,8 @@ export function initSocket(
         });
 
         // chain initialization 第二三次从"applicant to validator: initialization data"获取t
-        socket.on('applicant to validator: initialization data', (data) => {
-            handleChainInit(socket, data);
+        socket.on('applicant to validator: initialization data', async (data) => {
+            await handleChainInit(socket, data);
         });
         // chain initialization 申请者第一次从"applicant send blinded address"获取t
         socket.on('applicant send blinded address', async (data: AppBlindedAddress) => {

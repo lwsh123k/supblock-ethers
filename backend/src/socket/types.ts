@@ -19,23 +19,23 @@ export type PreToNextRelayData = {
     hb: null | string;
     b: null | number;
     n: null | number;
-    t: null | string;
+    t?: null | string;
     l: number;
 };
 
 // 链初始化时, applicant给relay发送消息
 export type AppToRelayData = {
-    from: null | string; // 申请者地址
+    from: null | string;
     to: null | string;
     appTempAccount: null | string;
+    appTempAccountPubkey: null | string;
     r: null | string;
     hf: null | string;
     hb: null | string;
     b: null | number;
     c: null | string;
-    l: number; // 数据序号
+    l: number;
     chainIndex: number;
-    lastUserRelay?: boolean;
 };
 
 // validator send back: 申请者发送init, validator回送token hash
@@ -87,4 +87,9 @@ export type AppBlindUpload = {
     hash: string;
     chainId: number; // 第几条链
     relayId: number; // 第几个relay
+};
+
+// relay对applicant的回应
+export type RelayResData = {
+    nextRelayRealnameAccount: string;
 };

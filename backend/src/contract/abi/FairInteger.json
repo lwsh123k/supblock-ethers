@@ -396,6 +396,74 @@
   },
   {
     "type": "function",
+    "name": "getNumByHash",
+    "constant": true,
+    "stateMutability": "view",
+    "payable": false,
+    "inputs": [
+      {
+        "type": "bytes32",
+        "name": "infoHash"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "tuple",
+        "components": [
+          {
+            "type": "bytes32",
+            "name": "infoHashA"
+          },
+          {
+            "type": "uint256",
+            "name": "hashTa"
+          },
+          {
+            "type": "uint256",
+            "name": "niA"
+          },
+          {
+            "type": "uint256",
+            "name": "riA"
+          },
+          {
+            "type": "uint256",
+            "name": "tA"
+          },
+          {
+            "type": "bytes32",
+            "name": "infoHashB"
+          },
+          {
+            "type": "uint256",
+            "name": "hashTb"
+          },
+          {
+            "type": "uint256",
+            "name": "niB"
+          },
+          {
+            "type": "uint256",
+            "name": "riB"
+          },
+          {
+            "type": "uint256",
+            "name": "tB"
+          },
+          {
+            "type": "bool",
+            "name": "reuploadInfoA"
+          },
+          {
+            "type": "bool",
+            "name": "reuploadInfoB"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "function",
     "name": "getPublicKeyByAddress",
     "constant": true,
     "stateMutability": "view",

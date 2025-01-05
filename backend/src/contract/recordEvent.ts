@@ -16,7 +16,11 @@ import {
 } from './eventListen/recordEventHandler';
 import { provider } from './util/provider';
 import WebSocket from 'ws';
-import { Pre2NextEventEventObject } from './types/StoreData';
+import {
+    App2RelayEventEventObject,
+    Pre2NextEventEventObject,
+    RelayResEvidenceEventEventObject,
+} from './types/StoreData';
 import {
     ReqHashUploadEventObject,
     ReqInfoUploadEventObject,
@@ -138,7 +142,7 @@ export async function recordThroughBlock() {
                                     console.log('App2RelayEvent');
                                     await handleApp2RelayEvent(
                                         tx.transactionHash,
-                                        parsedLog.args,
+                                        parsedLog.args as unknown as App2RelayEventEventObject,
                                         tx.blockNumber,
                                         tx.gasUsed
                                     );
@@ -156,7 +160,7 @@ export async function recordThroughBlock() {
                                 case 'RelayResEvidenceEvent': {
                                     await handleRelayResEvidenceEvent(
                                         tx.transactionHash,
-                                        parsedLog.args,
+                                        parsedLog.args as unknown as RelayResEvidenceEventEventObject,
                                         tx.blockNumber,
                                         tx.gasUsed
                                     );

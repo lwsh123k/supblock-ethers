@@ -13,7 +13,7 @@ import {
 import { Socket } from 'socket.io';
 import { logger } from '../util/logger';
 import { userSig } from './usersData';
-import { padTo64 } from '../contract/util/utils';
+import { ensure0xPrefix, padTo64 } from '../contract/util/utils';
 
 // 生成size字节的随机数
 function random(size: number): BigInteger {
@@ -143,7 +143,7 @@ export function signBlindedAddress(socket: Socket, data: AppBlindedAddress) {
     //addressToHashMap.set(from, signedAds.t_hashAry)
     //let t_hash = getStringHash(signedAds.t);
     for (let i = 0; i < 3; i++) {
-        t_hashAry[i] = keccak256(tAry[i]);
+        t_hashAry[i] = ensure0xPrefix(keccak256(tAry[i]));
     }
     let signedAddress: SignedAddress = { sBlind, t_hashAry, t_array: tAry };
     //因为from定义时可能为null，不检查一下会报错
