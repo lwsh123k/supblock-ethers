@@ -9,14 +9,14 @@ import {
 } from '../../contract/util/utils';
 import { PrismaClient } from '@prisma/client';
 import { verifyHashBackward, verifyHashForward } from '../../contract/util/verifyHash';
-import { userSig } from '../../socket/usersData';
+import { chainLength, userSig, validatorAccount } from '../../socket/usersData';
 import { logger } from '../../util/logger';
 import {
     getAccountInfoByContract,
     getAccountInfoByInfoHash,
     getBlindedFairIntByInfoHash,
 } from '../../contract/util/getOnChainData';
-import { chainLength, constructApplicantData } from './constructApplicantData';
+import { constructApplicantData, constructFinalData } from './constructApplicantData';
 
 // app received data
 export type AppReceivedData = {
@@ -58,7 +58,8 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
 
     // 检查relay 1 ~ L是否诚实, 首先验证发送给relay 1的数据
     let token = savedSig.t_array[chainId],
-        lastRoundBlindedFairInt = -1;
+        lastRoundBlindedFairInt = -1,
+        finalRelayRealnameAddress = validatorAccount;
     for (let i = 1; i <= chainLength; i++) {
         let infoHash = data[i].PA.infoHash,
             currentB = data[i].PA.b, // 当前轮的b
@@ -69,7 +70,8 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
             currentAppTempAccount = data[i].PA.from,
             currentHash = data[i].PA.hb,
             r = data[i].PA.r,
-            nextHash = data[i + 1].PA.hb;
+            nextHash = data[i + 1].PA.hb,
+            nextRelayRealnameAddress = data[i].PAReceive.relayRealnameAccount;
         if (
             infoHash == null ||
             preB == null ||
@@ -78,7 +80,8 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
             currentAppTempAccount == null ||
             currentHash == null ||
             r == null ||
-            nextHash == null
+            nextHash == null ||
+            nextRelayRealnameAddress == null
         ) {
             logger.error(
                 { infoHash, preB, nextRelayRealnameAccount, c, currentAppTempAccount },
@@ -108,9 +111,8 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
         let accountInfo = await getAccountInfoByContract(blindedFairIntNum);
         let selectedAddress = accountInfo.address,
             selectedPubkey = accountInfo.publicKey;
-
         // 检查applicant发送的wrong data存在于链上
-        let { encryptedData1, dataHash1 } = await constructApplicantData(
+        let { constructedData, encryptedData1, dataHash1 } = await constructApplicantData(
             chainId,
             i,
             data[i].PA,
@@ -148,7 +150,7 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
             nextRelayRealnameAccount,
         };
         let dataHash2 = keccak256(JSON.stringify(relayResData));
-        let cnt2 = await prisma.relayResEvidenceEvent.count({
+        let cnt2 = await prisma.relayResEvidenceEvent.findFirst({
             select: {
                 pre2NextResEvidence: true,
             },
@@ -191,7 +193,7 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
         });
         let preRelayAddress = preRelayInfo?.to;
         // 对比token
-        let cnt3 = await prisma.pre2NextEvent.count({
+        let cnt3 = await prisma.pre2NextEvent.findFirst({
             select: {
                 transactionHash: true,
             },
@@ -222,9 +224,38 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
             return;
         }
 
-        // token + c
+        // 构建下一轮的token = token + c
         token = addHexAndMod(token, c);
         lastRoundBlindedFairInt = blindedFairIntNum;
+        finalRelayRealnameAddress = nextRelayRealnameAddress;
+    }
+
+    // verify final data, 构造PR[L+1]
+    let relayFinalData = constructFinalData(data[chainLength].PA, finalRelayRealnameAddress, token);
+    let cnt4 = await prisma.pre2NextEvent.count({
+        where: {
+            ...relayFinalData,
+        },
+    });
+    logger.info(
+        {
+            searching: {
+                ...relayFinalData,
+            },
+        },
+        'searching relay final data'
+    );
+    if (cnt4 == 0) {
+        logger.error(
+            { 'relay index': lastRoundBlindedFairInt, 'relay address': finalRelayRealnameAddress },
+            'wrong relay info'
+        );
+        res.json({
+            result: true,
+            index: lastRoundBlindedFairInt,
+            address: finalRelayRealnameAddress,
+        });
+        return;
     }
     res.json({ result: false });
 });

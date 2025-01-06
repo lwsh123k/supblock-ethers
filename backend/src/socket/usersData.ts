@@ -3,9 +3,11 @@ import { AppBlindUpload, AppToRelayData, PreToNextRelayData, SignedAddress } fro
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
+export const validatorAccount = '0x863218e6ADad41bC3c2cb4463E26B625564ea3Ba';
 export const onlineUsers: { [propName: string]: Socket } = {};
 export const userSig: Map<string, SignedAddress> = new Map();
 export const chainNumber = 3;
+export const chainLength = 3;
 export const app2ValidatorData = new Map<string, AppToRelayData[]>(); // app给relay发送的chain init数据
 
 // user将b发送给server端, 方便后续打开新页面, relay info统计
