@@ -79,8 +79,8 @@ export async function activateAccount(CONTRACT_ADDRESS: string) {
             console.log(`Transaction sent: ${tx.hash}`);
 
             // 等待交易被挖矿
-            const receipt = await tx.wait();
-            console.log(`Transaction mined in block ${receipt.blockNumber}`);
+            // const receipt = await tx.wait();
+            // console.log(`Transaction mined in block ${receipt.blockNumber}`);
 
             // 解析事件日志以确认激活
             // const event = receipt.events?.find((e: any) => e.event === 'ActivateAccount');
