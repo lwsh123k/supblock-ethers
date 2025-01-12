@@ -102,6 +102,40 @@ CREATE TABLE "RelayResEvidenceEvent" (
     "gas" INTEGER NOT NULL
 );
 
+-- CreateTable
+CREATE TABLE "App2ValidatorData" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "from" TEXT,
+    "to" TEXT,
+    "appTempAccount" TEXT,
+    "appTempAccountPubkey" TEXT,
+    "r" TEXT,
+    "hf" TEXT,
+    "hb" TEXT,
+    "b" INTEGER,
+    "c" TEXT,
+    "l" INTEGER NOT NULL,
+    "chainIndex" INTEGER NOT NULL,
+    "hashBackwardRelation" INTEGER
+);
+
+-- CreateTable
+CREATE TABLE "RelayFinalData" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "from" TEXT,
+    "to" TEXT,
+    "preAppTempAccount" TEXT,
+    "preRelayAccount" TEXT,
+    "hf" TEXT,
+    "hb" TEXT,
+    "b" INTEGER,
+    "n" INTEGER,
+    "t" TEXT,
+    "l" INTEGER NOT NULL,
+    "app2ValidatorDataId" INTEGER NOT NULL,
+    CONSTRAINT "RelayFinalData_app2ValidatorDataId_fkey" FOREIGN KEY ("app2ValidatorDataId") REFERENCES "App2ValidatorData" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "UploadHash_transaction_hash_key" ON "UploadHash"("transaction_hash");
 
@@ -125,3 +159,6 @@ CREATE UNIQUE INDEX "Pre2NextEvent_transaction_hash_key" ON "Pre2NextEvent"("tra
 
 -- CreateIndex
 CREATE UNIQUE INDEX "RelayResEvidenceEvent_transaction_hash_key" ON "RelayResEvidenceEvent"("transaction_hash");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "RelayFinalData_app2ValidatorDataId_key" ON "RelayFinalData"("app2ValidatorDataId");

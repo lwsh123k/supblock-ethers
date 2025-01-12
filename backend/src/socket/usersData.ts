@@ -2,7 +2,7 @@ import { Socket } from 'socket.io';
 import { AppBlindUpload, AppToRelayData, PreToNextRelayData, SignedAddress } from './types';
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+export const prisma = new PrismaClient();
 export const validatorAccount = '0x863218e6ADad41bC3c2cb4463E26B625564ea3Ba';
 export const onlineUsers: { [propName: string]: Socket } = {};
 export const userSig: Map<string, SignedAddress> = new Map();
@@ -27,7 +27,7 @@ export async function saveApp2ValidatorInitData(
     chainId: number
 ) {
     // 保存到数据库
-    await prisma.chainInitData.create({
+    await prisma.app2ValidatorData.create({
         data: {
             ...data,
         },
@@ -49,15 +49,25 @@ export async function saveApp2ValidatorInitData(
 }
 
 /**
- * 保存applicant -> validator final data
+ * 保存applicant和relay -> validator final data
  * @param data 数据
  * @returns
  */
-export async function saveApp2ValidatorFinalData(data: AppToRelayData) {
-    // 保存到数据库
-    await prisma.chainInitData.create({
+export async function saveFinalData(data: {
+    appToRelayData: AppToRelayData;
+    preToNextRelayData: PreToNextRelayData;
+}) {
+    // 保存applicant -> relay final data
+    let res1 = await prisma.app2ValidatorData.create({
         data: {
-            ...data,
+            ...data.appToRelayData,
+        },
+    });
+    // 保存relay -> validator final data
+    let res2 = await prisma.relayFinalData.create({
+        data: {
+            ...data.preToNextRelayData,
+            app2ValidatorDataId: res1.id,
         },
     });
 }
@@ -67,8 +77,8 @@ export async function saveApp2ValidatorFinalData(data: AppToRelayData) {
  * @param data 数据
  * @returns
  */
-export async function saveRelay2ValidatorFinalData(data: PreToNextRelayData) {
-    await prisma.relayFinalData.create({
+export async function saveChainConfirmData(data: AppToRelayData) {
+    await prisma.app2ValidatorData.create({
         data: {
             ...data,
         },

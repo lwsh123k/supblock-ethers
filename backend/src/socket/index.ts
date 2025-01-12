@@ -56,6 +56,7 @@ export function initSocket(
             'blinding number',
             'applicant to validator: final data',
             'relay to validator: final data',
+            'applicant to validator: chain confirmation',
             'applicant send blinded address',
             'send relay info',
         ];

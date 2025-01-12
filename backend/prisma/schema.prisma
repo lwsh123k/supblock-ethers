@@ -117,7 +117,7 @@ model RelayResEvidenceEvent {
 }
 
 // 发送给validator的数据
-model ChainInitData {
+model App2ValidatorData {
     id                   Int     @id @default(autoincrement())
     from                 String?
     to                   String?
@@ -130,6 +130,10 @@ model ChainInitData {
     c                    String?
     l                    Int
     chainIndex           Int
+    hashBackwardRelation Int? // 哪两个组成了反向hash关系
+
+    // 关联字段
+    relayFinalData RelayFinalData? // 哪两个组成了正向hash关系
 }
 
 model RelayFinalData {
@@ -144,4 +148,8 @@ model RelayFinalData {
     n                 Int?
     t                 String?
     l                 Int
+
+    // 关联字段
+    app2ValidatorDataId Int               @unique // 确保一对一关系
+    app2ValidatorData   App2ValidatorData @relation(fields: [app2ValidatorDataId], references: [id])
 }
