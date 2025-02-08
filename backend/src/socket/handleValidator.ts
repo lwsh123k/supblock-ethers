@@ -231,7 +231,7 @@ async function verifyData(
     return null;
 }
 
-// hash(l+1) = hash(A(l+2), r(l+2))
+// 反向hash验证: hash(l+1) = hash(A(l+2), r(l+2))
 export async function handleChainConfirmation(userSocket: Socket, data: AppToRelayData) {
     let appEndingAccount = data.appTempAccount,
         r = data.r;

@@ -5,6 +5,7 @@ type LastRelayType = {
     chainIndex: number;
     lastRelayAccount: string;
     lastRelayIndex: number;
+    hashForward: string;
 };
 const findLastRelay = express.Router();
 findLastRelay.post('/findLastRelay', async (req, res) => {
@@ -83,6 +84,7 @@ findLastRelay.post('/findLastRelay', async (req, res) => {
                 chainIndex: hbId[i].chainIndex,
                 lastRelayAccount: relayFind.relayFinalData.from,
                 lastRelayIndex: index.id + 1,
+                hashForward: relayFind.relayFinalData.hf!,
             };
         }
     }
