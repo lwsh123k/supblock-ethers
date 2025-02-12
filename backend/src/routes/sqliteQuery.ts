@@ -112,4 +112,27 @@ interface Account {
 //     }
 // });
 
+slqiteRouter.post('/getBlindedFairIntNum', async (req, res) => {
+    const realNameAddress = req.body.realNameAddress as string;
+    console.log('searching blinded fair int number by address:', realNameAddress);
+
+    try {
+        const info = await prisma.supBlock.findFirst({
+            where: {
+                address: realNameAddress,
+            },
+            select: {
+                id: true,
+            },
+        });
+
+        // 因为数据库索引从1开始，而前端需要从0开始，所以返回id-1
+        const result = info ? info.id - 1 : -1;
+        res.status(200).send({ result });
+    } catch (error) {
+        console.error('Error getting blinded fair int number:', error);
+        res.status(500).send(-1);
+    }
+});
+
 export { slqiteRouter };

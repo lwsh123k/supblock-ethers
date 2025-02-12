@@ -69,7 +69,8 @@ findLastRelay.post('/findLastRelay', async (req, res) => {
         ) {
             continue;
         }
-        // 查找relay对应的index
+        // 查找relay对应的文件名编号, 文件名: 0, 1, 2, 3, ...
+        // 因为数据库索引从1开始，而前端需要从0开始，所以返回id-1
         let index = await prisma.supBlock.findFirst({
             select: {
                 id: true,
@@ -83,7 +84,7 @@ findLastRelay.post('/findLastRelay', async (req, res) => {
             lastRelayInfo[i] = {
                 chainIndex: hbId[i].chainIndex,
                 lastRelayAccount: relayFind.relayFinalData.from,
-                lastRelayIndex: index.id + 1,
+                lastRelayIndex: index.id - 1,
                 hashForward: relayFind.relayFinalData.hf!,
             };
         }
