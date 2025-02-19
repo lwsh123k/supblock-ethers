@@ -57,7 +57,9 @@ export async function recordThroughBlock() {
                 // get all tx
                 if (currentBlockNumber >= blockNumber) return;
                 currentBlockNumber = blockNumber;
-                console.log('current block number:', blockNumber);
+                if (blockNumber % 100 === 0) {
+                    console.log('current block number:', blockNumber);
+                }
                 const block = await provider.getBlock(blockNumber);
                 const transactions = await Promise.all(
                     block.transactions.map((txHash) => provider.getTransactionReceipt(txHash))

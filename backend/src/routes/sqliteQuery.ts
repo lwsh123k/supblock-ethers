@@ -54,63 +54,94 @@ interface Account {
     addressB: string;
     hashB: string;
 }
-// slqiteRouter.post('/getGasStatistic', async (req, res) => {
-//     console.log(11);
-//     let accounts: Account[] = req.body.accounts;
-//     try {
-//         let result = [];
-//         for (let account of accounts) {
-//             let infoA = await prisma.uploadHash.findUnique({
-//                 where: {
-//                     infoHash: account.hashA,
-//                 },
-//                 select: {
-//                     from: true,
-//                     to: true,
-//                     gas: true,
-//                     uploadNum: {
-//                         select: {
-//                             gas: true,
-//                         },
-//                     },
-//                     reuploadNum: {
-//                         select: {
-//                             gas: true,
-//                         },
-//                     },
-//                 },
-//             });
+slqiteRouter.post('/getGasStatistic', async (req, res) => {
+    let accounts: Account[] = req.body.accounts;
+    try {
+        let result = [];
+        for (let account of accounts) {
+            // 查询 hashA 相关的所有 gas 数据
+            let infoA = await prisma.uploadHash.findFirst({
+                where: {
+                    infoHash: account.hashA,
+                },
+                select: {
+                    from: true,
+                    to: true,
+                    gas: true,
+                },
+            });
 
-//             let infoB = await prisma.uploadHash.findUnique({
-//                 where: {
-//                     infoHash: account.hashB,
-//                 },
-//                 select: {
-//                     from: true,
-//                     to: true,
-//                     gas: true,
-//                     uploadNum: {
-//                         select: {
-//                             gas: true,
-//                         },
-//                     },
-//                     reuploadNum: {
-//                         select: {
-//                             gas: true,
-//                         },
-//                     },
-//                 },
-//             });
+            // 查询 hashB 相关的所有 gas 数据
+            let infoB = await prisma.uploadHash.findFirst({
+                where: {
+                    infoHash: account.hashB,
+                },
+                select: {
+                    from: true,
+                    to: true,
+                    gas: true,
+                },
+            });
 
-//             result.push([infoA, infoB]);
-//         }
-//         res.send(result);
-//     } catch {
-//     } finally {
-//         // 实际开发过程中不用每次都关闭连接
-//         // await prisma.$disconnect();
-//     }
-// });
+            // 查询与 hashA 相关的 uploadNum gas 数据
+            let uploadNumA = await prisma.uploadNum.findFirst({
+                where: {
+                    numHashA: account.hashA,
+                },
+                select: {
+                    gas: true,
+                },
+            });
+
+            // 查询与 hashB 相关的 uploadNum gas 数据
+            let uploadNumB = await prisma.uploadNum.findFirst({
+                where: {
+                    numHashB: account.hashB,
+                },
+                select: {
+                    gas: true,
+                },
+            });
+
+            // 查询与 hashA 相关的 reuploadNum gas 数据
+            let reuploadNumA = await prisma.reuploadNum.findFirst({
+                where: {
+                    originalHashA: account.hashA,
+                },
+                select: {
+                    gas: true,
+                },
+            });
+
+            // 查询与 hashB 相关的 reuploadNum gas 数据
+            let reuploadNumB = await prisma.reuploadNum.findFirst({
+                where: {
+                    originalHashB: account.hashB,
+                },
+                select: {
+                    gas: true,
+                },
+            });
+
+            result.push({
+                hashA: {
+                    uploadHash: infoA,
+                    uploadNum: uploadNumA,
+                    reuploadNum: reuploadNumA,
+                },
+                hashB: {
+                    uploadHash: infoB,
+                    uploadNum: uploadNumB,
+                    reuploadNum: reuploadNumB,
+                },
+            });
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in getGasStatistic:', error);
+        res.status(500).json({ error: 'Internal server error while fetching gas statistics' });
+    }
+});
 
 slqiteRouter.post('/getBlindedFairIntNum', async (req, res) => {
     const realNameAddress = req.body.realNameAddress as string;

@@ -16,6 +16,7 @@ findLastRelay.post('/findLastRelay', async (req, res) => {
     // 找到ending account对应的hashbackward relationship
     let hbId = await prisma.app2ValidatorData.findMany({
         select: {
+            id: true,
             hashBackwardRelation: true,
             chainIndex: true,
         },
@@ -37,6 +38,15 @@ findLastRelay.post('/findLastRelay', async (req, res) => {
             hbIdSet.add(item.chainIndex);
             return true;
         }
+    });
+
+    // chainIndex 1, 2, 3中1是最早的, 2, 3都比1晚, 2, 3不满足就丢弃.
+    // 按照chainIndex排序, 1, 2, 3
+    hbId = hbId.sort((a, b) => a.chainIndex - b.chainIndex);
+    hbId = hbId.filter((item, index) => {
+        if (index === 0) return true;
+        if (item.id > hbId[0].id) return true;
+        return false;
     });
 
     // 找到对应的relay real name account
