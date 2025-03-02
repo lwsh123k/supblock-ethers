@@ -15,7 +15,7 @@ interface AccountInfo {
 export async function activateAccount(CONTRACT_ADDRESS: string) {
     const RPC_URL = 'http://127.0.0.1:8545';
     const ABI = [
-        'function activateAccount(bytes32 sig, bytes publicKey) external',
+        'function activateAccount(bytes32 sig, bytes calldata publicKey) external',
         'event ActivateAccount(uint indexed index, address indexed anonymousAccount, bytes publicKey)',
     ];
 

@@ -4,14 +4,114 @@
     "payable": false,
     "inputs": [
       {
-        "type": "uint256",
+        "type": "uint64",
         "name": "_hashTime"
       },
       {
-        "type": "uint256",
+        "type": "uint64",
         "name": "_numTime"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "EmptyArray",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "HashAlreadyExists",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "HashTimeExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "LastDataNotProcessed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NiRiAlreadySet",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NiRiTimeExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoAddressFound",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotExceedUploadTime",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PublicKeyMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RandomHasReuploaded",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RandomIsCorrect",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RandomNotUploaded",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RequesterHashMissing",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RequesterOrResponderHashNotExist",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ResponderHashMissing",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ResponseHashExisted",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RiIsZero",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SelfRandomNotCorrect",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "WrongIndex",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroHash",
+    "inputs": []
   },
   {
     "type": "event",
@@ -56,17 +156,17 @@
         "indexed": false
       },
       {
-        "type": "uint256",
+        "type": "uint64",
         "name": "tA",
         "indexed": false
       },
       {
-        "type": "uint256",
+        "type": "uint64",
         "name": "tB",
         "indexed": false
       },
       {
-        "type": "uint256",
+        "type": "uint96",
         "name": "index",
         "indexed": false
       }
@@ -98,12 +198,12 @@
         "indexed": false
       },
       {
-        "type": "uint256",
+        "type": "uint64",
         "name": "tA",
         "indexed": false
       },
       {
-        "type": "uint256",
+        "type": "uint64",
         "name": "tB",
         "indexed": false
       },
@@ -177,17 +277,17 @@
         "indexed": false
       },
       {
-        "type": "uint256",
+        "type": "uint64",
         "name": "tA",
         "indexed": false
       },
       {
-        "type": "uint256",
+        "type": "uint64",
         "name": "tB",
         "indexed": false
       },
       {
-        "type": "uint256",
+        "type": "uint96",
         "name": "index",
         "indexed": false
       }
@@ -219,12 +319,12 @@
         "indexed": false
       },
       {
-        "type": "uint256",
+        "type": "uint64",
         "name": "tA",
         "indexed": false
       },
       {
-        "type": "uint256",
+        "type": "uint64",
         "name": "tB",
         "indexed": false
       },
@@ -303,8 +403,7 @@
     ],
     "outputs": [
       {
-        "type": "bool",
-        "name": "result"
+        "type": "bool"
       }
     ]
   },
@@ -315,8 +414,7 @@
     "payable": false,
     "inputs": [
       {
-        "type": "bytes32",
-        "name": "sig"
+        "type": "bytes32"
       },
       {
         "type": "bytes",
@@ -357,7 +455,7 @@
       },
       {
         "type": "bytes",
-        "name": "publicKey"
+        "name": "pubKey"
       }
     ]
   },
@@ -376,19 +474,18 @@
     "outputs": [
       {
         "type": "tuple",
-        "name": "index",
         "components": [
           {
             "type": "address",
             "name": "req"
           },
           {
-            "type": "address",
-            "name": "res"
+            "type": "uint96",
+            "name": "index"
           },
           {
-            "type": "uint256",
-            "name": "index"
+            "type": "address",
+            "name": "res"
           }
         ]
       }
@@ -415,8 +512,28 @@
             "name": "infoHashA"
           },
           {
-            "type": "uint256",
+            "type": "bytes32",
+            "name": "infoHashB"
+          },
+          {
+            "type": "uint64",
             "name": "hashTa"
+          },
+          {
+            "type": "uint64",
+            "name": "hashTb"
+          },
+          {
+            "type": "uint64",
+            "name": "tA"
+          },
+          {
+            "type": "uint64",
+            "name": "tB"
+          },
+          {
+            "type": "uint8",
+            "name": "reuploadFlags"
           },
           {
             "type": "uint256",
@@ -424,39 +541,15 @@
           },
           {
             "type": "uint256",
-            "name": "riA"
-          },
-          {
-            "type": "uint256",
-            "name": "tA"
-          },
-          {
-            "type": "bytes32",
-            "name": "infoHashB"
-          },
-          {
-            "type": "uint256",
-            "name": "hashTb"
-          },
-          {
-            "type": "uint256",
             "name": "niB"
           },
           {
             "type": "uint256",
-            "name": "riB"
+            "name": "riA"
           },
           {
             "type": "uint256",
-            "name": "tB"
-          },
-          {
-            "type": "bool",
-            "name": "reuploadInfoA"
-          },
-          {
-            "type": "bool",
-            "name": "reuploadInfoB"
+            "name": "riB"
           }
         ]
       }
@@ -494,10 +587,10 @@
     ],
     "outputs": [
       {
-        "type": "uint256"
+        "type": "uint64"
       },
       {
-        "type": "uint256"
+        "type": "uint64"
       },
       {
         "type": "uint256"
@@ -518,10 +611,10 @@
     ],
     "outputs": [
       {
-        "type": "uint256"
+        "type": "uint64"
       },
       {
-        "type": "uint256"
+        "type": "uint64"
       },
       {
         "type": "uint256"
@@ -536,7 +629,7 @@
     "inputs": [
       {
         "type": "address",
-        "name": "to"
+        "name": "other"
       },
       {
         "type": "uint256",
@@ -689,8 +782,28 @@
             "name": "infoHashA"
           },
           {
-            "type": "uint256",
+            "type": "bytes32",
+            "name": "infoHashB"
+          },
+          {
+            "type": "uint64",
             "name": "hashTa"
+          },
+          {
+            "type": "uint64",
+            "name": "hashTb"
+          },
+          {
+            "type": "uint64",
+            "name": "tA"
+          },
+          {
+            "type": "uint64",
+            "name": "tB"
+          },
+          {
+            "type": "uint8",
+            "name": "reuploadFlags"
           },
           {
             "type": "uint256",
@@ -698,39 +811,15 @@
           },
           {
             "type": "uint256",
-            "name": "riA"
-          },
-          {
-            "type": "uint256",
-            "name": "tA"
-          },
-          {
-            "type": "bytes32",
-            "name": "infoHashB"
-          },
-          {
-            "type": "uint256",
-            "name": "hashTb"
-          },
-          {
-            "type": "uint256",
             "name": "niB"
           },
           {
             "type": "uint256",
-            "name": "riB"
+            "name": "riA"
           },
           {
             "type": "uint256",
-            "name": "tB"
-          },
-          {
-            "type": "bool",
-            "name": "reuploadInfoA"
-          },
-          {
-            "type": "bool",
-            "name": "reuploadInfoB"
+            "name": "riB"
           }
         ]
       }
