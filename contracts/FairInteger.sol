@@ -456,8 +456,8 @@ contract FairInteger {
 		if (types == 0) {
 			// A 重传 => 说明 B 的随机数是错的 => UnifiedInspection(msg.sender, other, index, 0) == false
 			if (UnifiedInspection(msg.sender, other, index, 0)) revert RandomIsCorrect();
-			if (info.riA == 0) revert RandomNotUploaded();
-			bool reA = (info.reuploadFlags & 0x01) != 0;
+			if (info.riA == 0) revert RandomNotUploaded(); // 随机数未上传
+			bool reA = (info.reuploadFlags & 0x01) != 0; // 没有重传过
 			if (reA) revert RandomHasReuploaded();
 			// A 自己的随机数要是正确 => UnifiedInspection(msg.sender, other, index, 1) == true
 			if (!UnifiedInspection(msg.sender, other, index, 1)) revert SelfRandomNotCorrect();

@@ -45,6 +45,9 @@
         "wait-on": "^8.0.1"
     },
     "dependencies": {
-        "@openzeppelin/contracts": "^4.8.3"
+        "@noble/hashes": "^1.7.1",
+        "@openzeppelin/contracts": "^4.8.3",
+        "eth-crypto": "^2.7.0",
+        "js-sha3": "^0.9.3"
     }
 }

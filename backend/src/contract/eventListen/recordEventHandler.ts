@@ -172,7 +172,7 @@ export async function handleResInfoUpload(
 }
 
 // req reupload
-export async function handleResReuploadNum(
+export async function handleReqReuploadNum(
     txHash: string,
     args: ReqReuploadNumEventObject,
     blockNumber: number,
@@ -193,13 +193,13 @@ export async function handleResReuploadNum(
             gas: gasUsed.toNumber(),
         },
     });
-    logger.info({ ni: res.ni }, 'applicant random number reupload');
+    logger.info({ from, to, ni: res.ni }, 'applicant random number reupload');
     sendPluginMessage(from, to, ni.toNumber() % 99, originalHashA);
     await sendRelayInfo(from, to, ni.toNumber() % 99, originalHashA);
 }
 
 // res reupload
-export async function handleReqReuploadNum(
+export async function handleResReuploadNum(
     txHash: string,
     args: ResReuploadNumEventObject,
     blockNumber: number,
@@ -221,7 +221,7 @@ export async function handleReqReuploadNum(
         },
     });
 
-    logger.info({ ni: res.ni }, 'relay random number reupload');
+    logger.info({ from, to, ni: res.ni }, 'relay random number reupload');
     sendPluginMessage(to, from, ni.toNumber() % 99, originalHashA);
     await sendRelayInfo(to, from, ni.toNumber() % 99, originalHashA);
 }

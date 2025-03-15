@@ -31,6 +31,7 @@ const config: HardhatUserConfig = {
             },
         },
     },
+    // 生成typechain: npx hardhat compile
     typechain: {
         outDir: './typechain',
         target: 'ethers-v5',

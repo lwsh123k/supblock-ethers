@@ -32,6 +32,10 @@ interface wrongDataType {
 
 const verifyWrongData = express.Router();
 const prisma = new PrismaClient();
+
+// 验证wrong data
+// 为什么随机数重传对此部分没有影响，PA中infohash是什么，我搜索什么。
+// 而不是根据当前relay和applicant找到next relay，因为他们之间会执行多次多次随机数选择
 verifyWrongData.post('/verifyWrongData', async (req, res) => {
     if (!req.body.wrongData) return;
     let data = req.body.wrongData as wrongDataType[];
@@ -111,6 +115,10 @@ verifyWrongData.post('/verifyWrongData', async (req, res) => {
         let accountInfo = await getAccountInfoByContract(blindedFairIntNum);
         let selectedAddress = accountInfo.address,
             selectedPubkey = accountInfo.publicKey;
+        logger.info(
+            { blindedFairIntNum, selectedAddress, selectedPubkey },
+            'current round relay info'
+        );
         // 检查applicant发送的wrong data存在于链上
         let { constructedData, encryptedData1, dataHash1 } = await constructApplicantData(
             chainId,
