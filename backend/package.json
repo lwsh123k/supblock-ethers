@@ -2,6 +2,10 @@
     "name": "server",
     "version": "1.0.0",
     "main": "index.js",
+    "engines": {
+        "pnpm": "^8",
+        "node": ">=18"
+    },
     "scripts": {
         "build": "rimraf dist && npx tsc",
         "prestart": "npm run build",
