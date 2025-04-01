@@ -56,15 +56,22 @@ export function initSocket(
             'blinding number',
             'applicant to validator: final data',
             'relay to validator: final data',
+            'applicant to validator: chain confirmation',
             'applicant send blinded address',
-            'send relay info',
+            // 'send relay info',
+            // 'response pre relay info',
+            // 'request pre relay info',
         ];
         socket.onAny((eventName, data) => {
             if (excludeEvent.includes(eventName)) return;
-            const toSocket = onlineUsers[data.to];
-            if (toSocket) {
-                logger.info({ from: data.from, to: data.to, data: data }, 'socket forwards msg');
-                toSocket.emit(eventName, data);
+            try {
+                const toSocket = onlineUsers[data.to];
+                if (toSocket) {
+                    logger.info({ from: data.from, to: data.to, data: data }, eventName);
+                    toSocket.emit(eventName, data);
+                }
+            } catch (error) {
+                console.log(error);
             }
         });
 

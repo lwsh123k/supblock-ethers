@@ -11,12 +11,13 @@
         "start": "concurrently -n \"hardhatStart, nodemon, webpack\" -c \"bgBlue.bold,bgMagenta.bold,bgGreen.bold\" \"npm run hardhatStart\" \"npm run backendDev\" \"npm run appDev\"",
         "appDev": "cd app && npx webpack server",
         "backendDev": "cd backend && npx nodemon ./index-socket-new.js",
-        "hardhat": "concurrently --kill-others-on-fail --success \"first\" --names \"node,wait\" \"npm run hardhatNode\" \"npm run waitForNode\"",
-        "hardhatNode": "node -e \"if (process.platform === 'win32') { process.exit(0); } else { process.exit(1); }\" && powershell -Command \"& { $start = [DateTime]::UtcNow; npx hardhat node | ForEach-Object { if (([DateTime]::UtcNow - $start).TotalSeconds -ge 60) { $_ } } }\" || npx hardhat node",
+        "anvil": "anvil --silent --mnemonic \"test test test test test test test test test test test junk\" --accounts 301 --block-time 1",
+        "hardhat": "concurrently --kill-others-on-fail --success \"first\" --names \"node,wait\" \"npm run anvil\" \"npm run checkNode\"",
+        "hardhatNode": "powershell -Command \"& { $start = [DateTime]::UtcNow; npx hardhat node | ForEach-Object { if (([DateTime]::UtcNow - $start).TotalSeconds -ge 60) { $_ } } }\"",
         "waitForNode": "wait-on http://127.0.0.1:8545 && npm run hardhatDeploy",
-        "hardhatDeploy": "npx hardhat run --network localhost ./scripts/deployAll.ts",
-        "compile": "npx hardhat compile",
-        "testPlatform": "node -e \"process.exit(process.platform === 'win32' ? 0 : 1)\" && echo Windows || echo Non-Windows"
+        "checkNode": "node ./scripts/checkNode.js && npm run hardhatDeploy",
+        "hardhatDeploy": "npx hardhat run --network anvil ./scripts/deployAll.ts",
+        "compile": "npx hardhat compile"
     },
     "keywords": [],
     "author": "",
@@ -48,6 +49,9 @@
         "wait-on": "^8.0.1"
     },
     "dependencies": {
-        "@openzeppelin/contracts": "^4.8.3"
+        "@noble/hashes": "^1.7.1",
+        "@openzeppelin/contracts": "^4.8.3",
+        "eth-crypto": "^2.7.0",
+        "js-sha3": "^0.9.3"
     }
 }

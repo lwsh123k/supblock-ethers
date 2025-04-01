@@ -56,6 +56,7 @@ export function sendPluginMessage(
     } else logger.error('plugin not connect');
 }
 
+// applicant将b告诉extension
 export function handleAppBlindUpload(data: AppBlindUpload) {
     let { blindingNumber, tempAccount, relayAccount, hash, chainId, relayId } = data;
     hashToBMapping.set(hash, {

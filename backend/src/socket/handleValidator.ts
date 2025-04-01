@@ -2,7 +2,6 @@ import { Socket } from 'socket.io';
 import { logger } from '../util/logger';
 import { verifyHashBackward, verifyHashForward } from '../contract/util/verifyHash';
 import { ensure0xPrefix, getEncryptData, keccak256 } from '../contract/util/utils';
-import { PrismaClient } from '@prisma/client';
 import { writeFair, writeStoreData } from '../contract/eventListen/validatorListen';
 import eccBlind from './eccBlind';
 import { AppToRelayData, PreToNextRelayData, NumInfo, ValidatorSendBackSig } from './types';
@@ -12,8 +11,8 @@ import {
     hashToBMapping,
     onlineUsers,
     userSig,
-    saveApp2ValidatorFinalData,
-    saveRelay2ValidatorFinalData,
+    prisma,
+    saveFinalData,
 } from './usersData';
 import { getAccountInfoByContract } from '../contract/util/getOnChainData';
 
@@ -153,30 +152,31 @@ export async function handleFinalData(
     data: PreToNextRelayData | AppToRelayData
 ) {
     // save data from applicant or previous relay
-    let verifyResult = undefined;
+    let dataToInsert = undefined;
     if (typeof data === 'object' && data !== null && 'appTempAccount' in data) {
         finalAllAppToValidatorData.push(data); // 保存到内存
-        await saveApp2ValidatorFinalData(data); // 保存到数据库
-        verifyResult = await verifyData(data, null); // verify data
+        dataToInsert = await verifyData(data, null); // verify data
         console.log('receive final data from app: ', data);
     } else {
         finalAllPreToValidatorData.push(data);
-        await saveRelay2ValidatorFinalData(data);
-        verifyResult = await verifyData(null, data); // verify data
+        dataToInsert = await verifyData(null, data); // verify data
         console.log('receive final data from previous relay: ', data);
     }
 
-    console.log(verifyResult);
-    if (verifyResult === null) {
+    console.log(dataToInsert);
+    if (dataToInsert == null) {
         console.log('verify not pass');
     } else {
-        let toSocketAddress = verifyResult.appToRelayData.appTempAccount;
+        // 插入数据
+        await saveFinalData(dataToInsert);
+        // 通知applicabnt
+        let toSocketAddress = dataToInsert.appToRelayData.appTempAccount;
         let res = {
             from: 'validator',
             to: toSocketAddress,
             verify: true,
-            token: verifyResult.preToNextRelayData.t,
-            chainId: verifyResult.appToRelayData.chainIndex,
+            token: dataToInsert.preToNextRelayData.t,
+            chainId: dataToInsert.appToRelayData.chainIndex,
         };
         console.log(res);
         if (toSocketAddress === null) {
@@ -231,23 +231,53 @@ async function verifyData(
     return null;
 }
 
-// hash(l+2) = hash(A(l+2), r(l+2))
+// 反向hash验证: hash(l+1) = hash(A(l+2), r(l+2))
 export async function handleChainConfirmation(userSocket: Socket, data: AppToRelayData) {
-    let currentHash = data.hb;
-    if (!currentHash) {
-        userSocket.emit('chain confirmation result', { result: false });
+    let appEndingAccount = data.appTempAccount,
+        r = data.r;
+    if (appEndingAccount == null || r == null) {
+        userSocket.emit('chain confirmation result', { result: false, reason: 'data lack' });
         return;
     }
     for (let app2ValidatorData of finalAllAppToValidatorData) {
-        let appTempAccount = app2ValidatorData.appTempAccount,
-            r = app2ValidatorData.r;
-        if (!appTempAccount || !r) continue;
-        let res = verifyHashBackward(appTempAccount, r, currentHash, null);
+        let hash = app2ValidatorData.hb;
+        if (hash == null) continue;
+        let res = verifyHashBackward(appEndingAccount, r, hash, null);
         if (res) {
+            // 找到hash, 上传对应关系
+            let findId = await prisma.app2ValidatorData.findFirst({
+                select: {
+                    id: true,
+                },
+                where: {
+                    appTempAccount: app2ValidatorData.appTempAccount,
+                    appTempAccountPubkey: app2ValidatorData.appTempAccountPubkey,
+                    hb: hash,
+                },
+                orderBy: {
+                    id: 'desc',
+                },
+            });
+            // 插入chain confirmation data
+            let insert1 = await prisma.app2ValidatorData.create({
+                data: {
+                    ...data,
+                    hashBackwardRelation: findId?.id,
+                },
+            });
+            // 修改findId中hashbackword对应关系
+            await prisma.app2ValidatorData.update({
+                where: {
+                    id: findId?.id,
+                },
+                data: {
+                    hashBackwardRelation: insert1.id,
+                },
+            });
             userSocket.emit('chain confirmation result', { result: true });
             return;
         }
     }
 
-    userSocket.emit('chain confirmation result', { result: false });
+    userSocket.emit('chain confirmation result', { result: false, reason: 'hash mismatch' });
 }
