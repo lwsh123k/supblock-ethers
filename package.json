@@ -4,7 +4,7 @@
     "description": "",
     "main": "index.js",
     "engines": {
-        "pnpm": "^8",
+        "pnpm": ">=8",
         "node": ">=18"
     },
     "scripts": {
@@ -53,5 +53,10 @@
         "@openzeppelin/contracts": "^4.8.3",
         "eth-crypto": "^2.7.0",
         "js-sha3": "^0.9.3"
+    },
+    "pnpm": {
+        "overrides": {
+            "immutable": ">=4.3.8"
+        }
     }
 }
